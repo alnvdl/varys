@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"log/slog"
 	"maps"
 	"os"
 	"sort"
@@ -167,7 +168,6 @@ func (l *Simple) Refresh() {
 	wg.Wait()
 }
 
-// Save serializes the feed list to the given writer.
 func (l *Simple) Save(w io.Writer) error {
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
@@ -197,6 +197,38 @@ func (l *Simple) Load(r io.Reader) error {
 	l.feeds = data.Feeds
 
 	return nil
+}
+
+// LoadFeeds ensures that the feeds in the list match the given input feeds.
+// It keeps existing feeds that are in the input, adds new feeds that are
+// missing and discards feeds that are not in the input. So leaving inputFeeds
+// empty or nil will remove all feeds.
+func (l *Simple) LoadFeeds(inputFeeds []*InputFeed) {
+	l.muFeeds.Lock()
+	defer l.muFeeds.Unlock()
+
+	slog.Info("loading feeds")
+	newFeeds := make(map[string]*feed.Feed)
+	for _, inputFeed := range inputFeeds {
+		if f, ok := l.feeds[feed.UID(inputFeed.URL)]; ok {
+			// Feed is already in the list and is part of the input, keep it.
+			newFeeds[f.UID()] = f
+			continue
+		} else {
+			// Feed does not yet exist, add it to the list.
+			newFeed := &feed.Feed{
+				Name:   inputFeed.Name,
+				URL:    inputFeed.URL,
+				Type:   inputFeed.Type,
+				Params: inputFeed.Params,
+			}
+			newFeeds[newFeed.UID()] = newFeed
+		}
+		// Feeds that were in the list but are not part of the input are
+		// discarded.
+	}
+
+	l.feeds = newFeeds
 }
 
 // simpleStoreAllFeed returns the feed summary for the virtual feed containing

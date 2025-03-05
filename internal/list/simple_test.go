@@ -73,7 +73,7 @@ func TestFeedListSave(t *testing.T) {
 	feeds := map[string]*feed.Feed{
 		"feed1": {
 			Name: "Feed 1",
-			Type: "rss",
+			Type: "xml",
 			URL:  "http://example.com/feed1",
 			Items: map[string]*feed.Item{
 				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -81,7 +81,7 @@ func TestFeedListSave(t *testing.T) {
 		},
 		"feed2": {
 			Name: "Feed 2",
-			Type: "rss",
+			Type: "xml",
 			URL:  "http://example.com/feed2",
 			Items: map[string]*feed.Item{
 				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
@@ -142,7 +142,7 @@ func TestFeedListLoad(t *testing.T) {
 	feeds := map[string]*feed.Feed{
 		"feed1": {
 			Name: "Feed 1",
-			Type: "rss",
+			Type: "xml",
 			URL:  "http://example.com/feed1",
 			Items: map[string]*feed.Item{
 				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -150,7 +150,7 @@ func TestFeedListLoad(t *testing.T) {
 		},
 		"feed2": {
 			Name: "Feed 2",
-			Type: "rss",
+			Type: "xml",
 			URL:  "http://example.com/feed2",
 			Items: map[string]*feed.Item{
 				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
@@ -216,7 +216,7 @@ func TestListSummary(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -232,7 +232,7 @@ func TestListSummary(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -240,7 +240,7 @@ func TestListSummary(t *testing.T) {
 			},
 			"feed2": {
 				Name: "Feed 2",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
 					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
@@ -248,7 +248,7 @@ func TestListSummary(t *testing.T) {
 			},
 			"feed3": {
 				Name:  "Feed 3",
-				Type:  "rss",
+				Type:  "xml",
 				URL:   "http://example.com/feed3",
 				Items: map[string]*feed.Item{},
 			},
@@ -292,7 +292,7 @@ func TestListFeedSummary(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -314,7 +314,7 @@ func TestListFeedSummary(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -322,7 +322,7 @@ func TestListFeedSummary(t *testing.T) {
 			},
 			"feed2": {
 				Name: "Feed 2",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
 					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
@@ -377,7 +377,7 @@ func TestListFeedItem(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
@@ -392,7 +392,7 @@ func TestListFeedItem(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {
@@ -663,7 +663,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -676,7 +676,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -688,7 +688,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -701,7 +701,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -713,7 +713,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -728,7 +728,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true},
@@ -742,7 +742,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -755,7 +755,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true},
@@ -767,7 +767,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
@@ -775,7 +775,7 @@ func TestSimpleMarkRead(t *testing.T) {
 			},
 			"feed2": {
 				Name: "Feed 2",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
 					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: false},
@@ -788,7 +788,7 @@ func TestSimpleMarkRead(t *testing.T) {
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true},
@@ -796,7 +796,7 @@ func TestSimpleMarkRead(t *testing.T) {
 			},
 			"feed2": {
 				Name: "Feed 2",
-				Type: "rss",
+				Type: "xml",
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
 					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: true},
@@ -943,6 +943,72 @@ func TestSimpleRefresh(t *testing.T) {
 			l.Refresh()
 			for key, expectedFeed := range test.expectedFeeds {
 				actualFeed, ok := list.Feeds(l)[key]
+				if !ok {
+					t.Fatalf("expected feed %s to be present", key)
+				}
+				checkFeed(t, *actualFeed, *expectedFeed)
+			}
+		})
+	}
+}
+
+func TestSimpleLoadFeeds(t *testing.T) {
+	tests := []struct {
+		desc          string
+		initialFeeds  map[string]*feed.Feed
+		inputFeeds    []*list.InputFeed
+		expectedFeeds map[string]*feed.Feed
+	}{{
+		desc:          "list has 0 feeds, and the inputFeeds are empty",
+		initialFeeds:  map[string]*feed.Feed{},
+		inputFeeds:    []*list.InputFeed{},
+		expectedFeeds: map[string]*feed.Feed{},
+	}, {
+		desc:         "list has 0 feeds, and inputFields has 2 feeds",
+		initialFeeds: map[string]*feed.Feed{},
+		inputFeeds: []*list.InputFeed{
+			{Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			{Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
+		},
+		expectedFeeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			feed.UID("http://example.com/feed2"): {Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
+		},
+	}, {
+		desc: "list has 2 feeds, and inputFields adds a new field and omits one existing feed",
+		initialFeeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			feed.UID("http://example.com/feed2"): {Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
+		},
+		inputFeeds: []*list.InputFeed{
+			{Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			{Name: "Feed 3", URL: "http://example.com/feed3", Type: "xml"},
+		},
+		expectedFeeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			feed.UID("http://example.com/feed3"): {Name: "Feed 3", URL: "http://example.com/feed3", Type: "xml"},
+		},
+	}, {
+		desc: "list has 2 feeds, and inputFields has no feeds",
+		initialFeeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			feed.UID("http://example.com/feed2"): {Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
+		},
+		inputFeeds:    []*list.InputFeed{},
+		expectedFeeds: map[string]*feed.Feed{},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			l := list.NewSimple(list.SimpleParams{})
+			list.SetFeeds(l, test.initialFeeds)
+			l.LoadFeeds(test.inputFeeds)
+			actualFeeds := list.Feeds(l)
+			if len(actualFeeds) != len(test.expectedFeeds) {
+				t.Fatalf("expected %d feeds, got %d", len(test.expectedFeeds), len(actualFeeds))
+			}
+			for key, expectedFeed := range test.expectedFeeds {
+				actualFeed, ok := actualFeeds[key]
 				if !ok {
 					t.Fatalf("expected feed %s to be present", key)
 				}

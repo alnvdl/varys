@@ -127,7 +127,7 @@ func TestFetch(t *testing.T) {
 		desc:          "HTTP error",
 		serverData:    "",
 		feedURL:       "http://127.0.0.1:12345/feed.xml",
-		feedType:      "rss",
+		feedType:      "xml",
 		expectedItems: []feed.RawItem{},
 		expectedError: `cannot make request: Get "http://127.0.0.1:12345/feed.xml": dial tcp 127.0.0.1:12345: connect: connection refused`,
 	}, {

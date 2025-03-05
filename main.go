@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -51,6 +52,14 @@ func accessToken() string {
 	return accessToken
 }
 
+func feeds() []*list.InputFeed {
+	var feeds []*list.InputFeed
+	if err := json.Unmarshal([]byte(os.Getenv("FEEDS")), &feeds); err != nil {
+		slog.Error("cannot parse feeds", slog.String("err", err.Error()))
+	}
+	return feeds
+}
+
 func main() {
 	inputFile, err := os.OpenFile(dbPath(), os.O_RDONLY|os.O_CREATE, 0600)
 	if err != nil {
@@ -61,6 +70,7 @@ func main() {
 
 	feedList := list.NewSimple(list.SimpleParams{})
 	feedList.Load(inputFile)
+	feedList.LoadFeeds(feeds())
 	feedList.Refresh()
 
 	outputFile, err := os.OpenFile(dbPath(), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
