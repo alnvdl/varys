@@ -72,12 +72,13 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 		if len(items) == 0 {
 			items = rss.Items
 		}
-		for _, item := range items {
+		for pos, item := range items {
 			feedItems = append(feedItems, feed.RawItem{
-				URL:     silentlySanitizePlainText(link(item.Link, baseURL)),
-				Title:   silentlySanitizePlainText(item.Title),
-				Authors: silentlySanitizePlainText(strings.Join(append(item.Authors, item.Creator...), ", ")),
-				Content: silentlySanitizeHTML(coalesce(item.Encoded, item.Description)),
+				URL:      silentlySanitizePlainText(link(item.Link, baseURL)),
+				Title:    silentlySanitizePlainText(item.Title),
+				Authors:  silentlySanitizePlainText(strings.Join(append(item.Authors, item.Creator...), ", ")),
+				Content:  silentlySanitizeHTML(coalesce(item.Encoded, item.Description)),
+				Position: pos,
 			})
 		}
 	}
@@ -86,12 +87,13 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	atomErr := tryParseFeed(data, &atom)
 	if atomErr == nil && len(atom.Entries) > 0 {
 		baseURL := link(atom.Link.Href, "")
-		for _, entry := range atom.Entries {
+		for pos, entry := range atom.Entries {
 			feedItems = append(feedItems, feed.RawItem{
 				URL:     silentlySanitizePlainText(link(entry.Link.Href, baseURL)),
 				Title:   silentlySanitizePlainText(entry.Title),
 				Authors: silentlySanitizePlainText(strings.Join(entry.Authors, ", ")),
 				Content: silentlySanitizeHTML(coalesce(entry.Content, entry.Summary)),
+				Position: pos,
 			})
 		}
 	}

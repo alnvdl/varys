@@ -98,7 +98,7 @@ func (f *Feed) Refresh(items []RawItem, fetchErr error) {
 			log.Info("detected invalid item in feed, skipping", slog.Int("itemPos", i))
 			continue
 		}
-		// If the item was never seen before, added it with the current
+		// If the item was never seen before, add it with the current
 		// timestamp.
 		if f.Items[item.UID()] == nil {
 			f.Items[item.UID()] = &Item{
@@ -121,9 +121,10 @@ func (f *Feed) SortedItems() []Item {
 	for _, item := range f.Items {
 		sortedItems = append(sortedItems, *item)
 	}
+	// Sort items by timestamp and then position in descending order.
 	sort.Slice(sortedItems, func(i, j int) bool {
 		if sortedItems[i].Timestamp == sortedItems[j].Timestamp {
-			return sortedItems[i].URL < sortedItems[j].URL
+			return sortedItems[i].Position < sortedItems[j].Position
 		}
 		return sortedItems[i].Timestamp > sortedItems[j].Timestamp
 	})

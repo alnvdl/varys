@@ -40,10 +40,13 @@ func (p *htmlParams) validate() error {
 // candidateItem is a candidate feed item extracted from HTML content.
 type candidateItem struct {
 	url string
+
 	// parts are relevant segments from inside the candidate item. They are
 	// usually extracted from text nodes and img tags, and have to be
 	// interpreted by the caller (e.g., to determine the title).
 	parts []string
+
+	position int
 }
 
 func (c *candidateItem) merge(other *candidateItem) {
@@ -143,6 +146,7 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 	}
 	findContainers(doc)
 
+	var position int
 	for _, container := range containers {
 		var findCandidateItems func(*html.Node)
 		findCandidateItems = func(n *html.Node) {
@@ -150,6 +154,8 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 				ci := extractCandidateItem(n, p.BaseURL, p.AllowedPrefixes)
 				if ci != nil {
 					if cisByURL[ci.url] == nil {
+						ci.position = position
+						position++
 						cisByURL[ci.url] = ci
 					} else {
 						cisByURL[ci.url].merge(ci)
@@ -163,8 +169,16 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 		findCandidateItems(container)
 	}
 
-	var rawItems []feed.RawItem
+	cis := make([]*candidateItem, 0, len(cisByURL))
 	for _, ci := range cisByURL {
+		cis = append(cis, ci)
+	}
+	sort.Slice(cis, func(i, j int) bool {
+		return cis[i].position < cis[j].position
+	})
+
+	var rawItems []feed.RawItem
+	for _, ci := range cis {
 		title := "Unknown title"
 		if p.TitlePos < len(ci.parts) {
 			title = ci.parts[p.TitlePos]
@@ -172,14 +186,12 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 			title = ci.parts[0]
 		}
 		rawItems = append(rawItems, feed.RawItem{
-			URL:     ci.url,
-			Title:   title,
-			Content: strings.Join(ci.parts, "<br/>"),
+			URL:      ci.url,
+			Title:    title,
+			Content:  strings.Join(ci.parts, "<br/>"),
+			Position: ci.position,
 		})
 	}
-	sort.Slice(rawItems, func(i, j int) bool {
-		return rawItems[i].URL < rawItems[j].URL
-	})
 
 	return rawItems, nil
 }

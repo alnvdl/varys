@@ -555,7 +555,11 @@ func TestAllFeed(t *testing.T) {
 					for i := range 100 {
 						url := fmt.Sprintf("url%d", i*3+1)
 						items[feed.UID(url)] = &feed.Item{
-							RawItem:   feed.RawItem{URL: url, Title: fmt.Sprintf("Title %d", i*3+1)},
+							RawItem: feed.RawItem{
+								URL:      url,
+								Title:    fmt.Sprintf("Title %d", i*3+1),
+								Position: i*3 + 1,
+							},
 							Timestamp: now - int64(i),
 							Read:      false,
 							FeedUID:   feed.UID("url1"),
@@ -573,7 +577,11 @@ func TestAllFeed(t *testing.T) {
 					for i := range 100 {
 						url := fmt.Sprintf("url%d", i*3+2)
 						items[feed.UID(url)] = &feed.Item{
-							RawItem:   feed.RawItem{URL: url, Title: fmt.Sprintf("Title %d", i*3+2)},
+							RawItem: feed.RawItem{
+								URL:      url,
+								Title:    fmt.Sprintf("Title %d", i*3+2),
+								Position: i*3 + 2,
+							},
 							Timestamp: now - int64(i),
 							Read:      false,
 							FeedUID:   feed.UID("url2"),
@@ -591,7 +599,11 @@ func TestAllFeed(t *testing.T) {
 					for i := range 100 {
 						url := fmt.Sprintf("url%d", i*3+3)
 						items[feed.UID(url)] = &feed.Item{
-							RawItem:   feed.RawItem{URL: url, Title: fmt.Sprintf("Title %d", i*3+3)},
+							RawItem: feed.RawItem{
+								URL:      url,
+								Title:    fmt.Sprintf("Title %d", i*3+3),
+								Position: i*3 + 3,
+							},
 							Timestamp: now - int64(i),
 							Read:      false,
 							FeedUID:   feed.UID("url3"),

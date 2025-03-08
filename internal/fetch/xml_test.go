@@ -41,10 +41,11 @@ func TestParseXML(t *testing.T) {
 				</channel>
 			</rss>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/content/item1",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "Content 1",
+			URL:      "http://example.com/content/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "Content 1",
+			Position: 0,
 		}},
 	}, {
 		desc: "RSS with 1 invalid item",
@@ -61,8 +62,9 @@ func TestParseXML(t *testing.T) {
 				</channel>
 			</rss>`,
 		expected: []feed.RawItem{{
-			Authors: "Author 1",
-			Content: "Content 1",
+			Authors:  "Author 1",
+			Content:  "Content 1",
+			Position: 0,
 		}},
 	}, {
 		desc: "RSS with 3 items",
@@ -95,20 +97,23 @@ func TestParseXML(t *testing.T) {
 				</channel>
 			</rss>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/item1",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "Content 1",
+			URL:      "http://example.com/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "Content 1",
+			Position: 0,
 		}, {
-			URL:     "http://example.com/item2",
-			Title:   "Item 2",
-			Authors: "Author 2",
-			Content: "Content 2",
+			URL:      "http://example.com/item2",
+			Title:    "Item 2",
+			Authors:  "Author 2",
+			Content:  "Content 2",
+			Position: 1,
 		}, {
-			URL:     "http://example.com/item3",
-			Title:   "Item 3",
-			Authors: "Author 3, Author 4",
-			Content: "Content 3",
+			URL:      "http://example.com/item3",
+			Title:    "Item 3",
+			Authors:  "Author 3, Author 4",
+			Content:  "Content 3",
+			Position: 2,
 		}},
 	}, {
 		desc: "Atom with 0 items",
@@ -133,10 +138,11 @@ func TestParseXML(t *testing.T) {
 						</entry>
 					</feed>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/content/item1",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "Content 1",
+			URL:      "http://example.com/content/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "Content 1",
+			Position: 0,
 		}},
 	}, {
 		desc: "Atom with 3 items",
@@ -172,20 +178,23 @@ func TestParseXML(t *testing.T) {
 				</entry>
 			</feed>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/item1",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "Content 1",
+			URL:      "http://example.com/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "Content 1",
+			Position: 0,
 		}, {
-			URL:     "http://example.com/item2",
-			Title:   "Item 2",
-			Authors: "Author 2",
-			Content: "Content 2",
+			URL:      "http://example.com/item2",
+			Title:    "Item 2",
+			Authors:  "Author 2",
+			Content:  "Content 2",
+			Position: 1,
 		}, {
-			URL:     "http://example.com/item3",
-			Title:   "Item 3",
-			Authors: "Author 3",
-			Content: "Content 3",
+			URL:      "http://example.com/item3",
+			Title:    "Item 3",
+			Authors:  "Author 3",
+			Content:  "Content 3",
+			Position: 2,
 		}},
 	}, {
 		desc: "RSS with mixed valid and invalid items",
@@ -222,15 +231,17 @@ func TestParseXML(t *testing.T) {
 				</channel>
 			</rss>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/item1",
-			Title:   "Item 1",
-			Authors: "Author 1, Author 2",
-			Content: "<div>should be in output</div><b>Content 1</b>",
+			URL:      "http://example.com/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1, Author 2",
+			Content:  "<div>should be in output</div><b>Content 1</b>",
+			Position: 0,
 		}, {
-			URL:     "http://example.com/item2",
-			Title:   "Item 2",
-			Authors: "Author 3",
-			Content: "Content 2",
+			URL:      "http://example.com/item2",
+			Title:    "Item 2",
+			Authors:  "Author 3",
+			Content:  "Content 2",
+			Position: 1,
 		}},
 	}, {
 		desc: "Atom with mixed valid and invalid items",
@@ -269,17 +280,20 @@ func TestParseXML(t *testing.T) {
 				</entry>
 			</feed>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/item1",
-			Title:   "Item 1",
-			Authors: "Author 1, Author 2",
-			Content: "Content 1",
+			URL:      "http://example.com/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1, Author 2",
+			Content:  "Content 1",
+			Position: 0,
 		}, {
 			// Empty item.
+			Position: 1,
 		}, {
-			URL:     "http://example.com/item2",
-			Title:   "Item 2",
-			Authors: "Author 3",
-			Content: "Content 2",
+			URL:      "http://example.com/item2",
+			Title:    "Item 2",
+			Authors:  "Author 3",
+			Content:  "Content 2",
+			Position: 2,
 		}},
 	}, {
 		desc: "RSS with HTML in fields",
@@ -298,10 +312,11 @@ func TestParseXML(t *testing.T) {
 				</channel>
 			</rss>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/item1",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "<div>should be in output</div><b>Content 1</b>",
+			URL:      "http://example.com/item1",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "<div>should be in output</div><b>Content 1</b>",
+			Position: 0,
 		}},
 	}, {
 		desc: "Atom with HTML in fields",
@@ -318,10 +333,11 @@ func TestParseXML(t *testing.T) {
 				</entry>
 			</feed>`,
 		expected: []feed.RawItem{{
-			URL:     "http://example.com/what%3Cdiv%3Eshould%20just%20be%20text%3C/div%3Esomething",
-			Title:   "Item 1",
-			Authors: "Author 1",
-			Content: "<div>should be in output</div><b>Content 1</b>",
+			URL:      "http://example.com/what%3Cdiv%3Eshould%20just%20be%20text%3C/div%3Esomething",
+			Title:    "Item 1",
+			Authors:  "Author 1",
+			Content:  "<div>should be in output</div><b>Content 1</b>",
+			Position: 0,
 		}},
 	}, {
 		desc:     "malformed XML",

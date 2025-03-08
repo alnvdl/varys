@@ -155,13 +155,12 @@ func (l *Simple) Refresh() {
 	for _, feed := range l.feeds {
 		wg.Add(1)
 		go func() {
-			items, fetchErr := l.fetcher(fetch.FetchParams{
+			feed.Refresh(l.fetcher(fetch.FetchParams{
 				URL:        feed.URL,
 				FeedName:   feed.Name,
 				FeedType:   feed.Type,
 				FeedParams: feed.Params,
-			})
-			feed.Refresh(items, fetchErr)
+			}))
 			wg.Done()
 		}()
 	}

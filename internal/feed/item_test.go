@@ -14,29 +14,31 @@ func TestItemRefresh(t *testing.T) {
 	}{{
 		desc:        "raw item was empty",
 		initialItem: Item{},
-		rawItem:     RawItem{URL: "url1", Title: "New Title 1"},
+		rawItem:     RawItem{URL: "url1", Title: "New Title 1", Position: 2},
 		expectedItem: Item{
-			RawItem: RawItem{URL: "url1", Title: "New Title 1"},
+			// Position is set because the URL was empty.
+			RawItem: RawItem{URL: "url1", Title: "New Title 1", Position: 2},
 		},
 		expectedResult: true,
 	}, {
 		desc: "raw item changed",
 		initialItem: Item{
-			RawItem: RawItem{URL: "url1", Title: "Title 1"},
+			RawItem: RawItem{URL: "url1", Title: "Title 1", Position: 1, Authors: "Author 1", Content: "Content 1"},
 		},
-		rawItem: RawItem{URL: "url1", Title: "Updated Title 1"},
+		rawItem: RawItem{URL: "url1", Title: "Updated Title 1", Position: 2, Authors: "Author 2", Content: "Content 2"},
 		expectedItem: Item{
-			RawItem: RawItem{URL: "url1", Title: "Updated Title 1"},
+			// Position is unchanged because URL was not empty.
+			RawItem: RawItem{URL: "url1", Title: "Updated Title 1", Position: 1, Authors: "Author 2", Content: "Content 2"},
 		},
 		expectedResult: true,
 	}, {
 		desc: "raw item did not change",
 		initialItem: Item{
-			RawItem: RawItem{URL: "url1", Title: "Title 1"},
+			RawItem: RawItem{URL: "url1", Title: "Title 1", Position: 1},
 		},
-		rawItem: RawItem{URL: "url1", Title: "Title 1"},
+		rawItem: RawItem{URL: "url1", Title: "Title 1", Position: 2},
 		expectedItem: Item{
-			RawItem: RawItem{URL: "url1", Title: "Title 1"},
+			RawItem: RawItem{URL: "url1", Title: "Title 1", Position: 1},
 		},
 		expectedResult: false,
 	}}

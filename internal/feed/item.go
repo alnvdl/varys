@@ -12,6 +12,11 @@ type RawItem struct {
 	// Content is the full content of the item, usually a sanitized HTML
 	// fragment.
 	Content string `json:"content"`
+	// Position is the position of the item in the feed when it was first seen.
+	// Assuming two items are first seen at the same time, a lower position
+	// typically means a newer item (i.e., that's how blogs are typically laid
+	// out).
+	Position int `json:"position"`
 }
 
 // UID returns a unique identifier for the raw item if it is valid. Otherwise,
@@ -40,6 +45,7 @@ type Item struct {
 	// Timestamp is the time when the item was first seen. This field is
 	// populated by the feed itself.
 	Timestamp int64 `json:"timestamp"`
+
 	// Read is true if the item was marked as read by the user.
 	Read bool `json:"read"`
 }
@@ -58,14 +64,32 @@ type ItemSummary struct {
 	Content   string `json:"content,omitempty"`
 }
 
-// Refresh updates the item with the new raw item r. It returns true if the
-// item was updated, false otherwise.
+// Refresh updates the item with certain changeable fields coming from the new
+// raw item r. It returns true if the item was updated, false otherwise.
 func (i *Item) Refresh(r RawItem) bool {
-	if i.RawItem != r {
-		i.RawItem = r
-		return true
+	changed := false
+	// Only update the position if the item has no URL, meaning this Item is
+	// being initialized with r.
+	if i.URL == "" && i.Position != r.Position {
+		i.Position = r.Position
 	}
-	return false
+	if i.URL != r.URL {
+		i.URL = r.URL
+		changed = true
+	}
+	if i.Title != r.Title {
+		i.Title = r.Title
+		changed = true
+	}
+	if i.Authors != r.Authors {
+		i.Authors = r.Authors
+		changed = true
+	}
+	if i.Content != r.Content {
+		i.Content = r.Content
+		changed = true
+	}
+	return changed
 }
 
 func (i *Item) Summary(f *Feed, includeContent bool) *ItemSummary {
