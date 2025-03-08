@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alnvdl/varys/internal/feed"
+	"golang.org/x/net/html/charset"
 )
 
 type RSS struct {
@@ -15,6 +17,7 @@ type RSS struct {
 		Items []RSSItem `xml:"item"`
 		Link  string    `xml:"link"`
 	} `xml:"channel"`
+	Items []RSSItem `xml:"item"`
 }
 
 type RSSItem struct {
@@ -51,16 +54,25 @@ type AtomEntry struct {
 	Summary   string   `xml:"summary"`
 }
 
+func tryParseFeed(data []byte, v any) error {
+	r := bytes.NewReader(data)
+	dec := xml.NewDecoder(r)
+	dec.CharsetReader = charset.NewReaderLabel
+	return dec.Decode(&v)
+}
+
 func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	var feedItems []feed.RawItem
 
 	rss := RSS{}
-	atom := Atom{}
-
-	rssErr := xml.Unmarshal(data, &rss)
-	if rssErr == nil && len(rss.Channel.Items) > 0 {
+	rssErr := tryParseFeed(data, &rss)
+	if rssErr == nil && (len(rss.Channel.Items) > 0 || len(rss.Items) > 0) {
 		baseURL := link(rss.Channel.Link, "")
-		for _, item := range rss.Channel.Items {
+		items := rss.Channel.Items
+		if len(items) == 0 {
+			items = rss.Items
+		}
+		for _, item := range items {
 			feedItems = append(feedItems, feed.RawItem{
 				URL:     silentlySanitizePlainText(link(item.Link, baseURL)),
 				Title:   silentlySanitizePlainText(item.Title),
@@ -70,7 +82,8 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 		}
 	}
 
-	atomErr := xml.Unmarshal(data, &atom)
+	atom := Atom{}
+	atomErr := tryParseFeed(data, &atom)
 	if atomErr == nil && len(atom.Entries) > 0 {
 		baseURL := link(atom.Link.Href, "")
 		for _, entry := range atom.Entries {

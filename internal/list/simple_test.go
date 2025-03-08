@@ -43,6 +43,10 @@ func checkFeed(t *testing.T, feed feed.Feed, expectedFeed feed.Feed) {
 	if feed.LastRefreshError != expectedFeed.LastRefreshError {
 		t.Errorf("expected last refresh error %v, got %v", expectedFeed.LastRefreshError, feed.LastRefreshError)
 	}
+	if feed.Params != expectedFeed.Params {
+		t.Errorf("expected feed params %v, got %v", expectedFeed.Params, feed.Params)
+	}
+
 	checkFeedItems(t, feed, expectedFeed.SortedItems())
 }
 
@@ -604,7 +608,7 @@ func TestAllFeed(t *testing.T) {
 			Name: "All",
 			Items: func() []*feed.ItemSummary {
 				var items []*feed.ItemSummary
-				for i := range 100 {
+				for i := range 300 {
 					url := fmt.Sprintf("url%d", i+1)
 					feedUID := feed.UID(fmt.Sprintf("url%d", (i%3)+1))
 					items = append(items, &feed.ItemSummary{
@@ -619,7 +623,7 @@ func TestAllFeed(t *testing.T) {
 				}
 				return items
 			}(),
-			ItemCount:   100,
+			ItemCount:   300,
 			ReadCount:   0,
 			LastUpdated: now,
 		},
@@ -975,17 +979,17 @@ func TestSimpleLoadFeeds(t *testing.T) {
 			feed.UID("http://example.com/feed2"): {Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
 		},
 	}, {
-		desc: "list has 2 feeds, and inputFields adds a new field and omits one existing feed",
+		desc: "list has 2 feeds, and inputFields adds a new feed, updates an existing one and omits one existing feed",
 		initialFeeds: map[string]*feed.Feed{
 			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
 			feed.UID("http://example.com/feed2"): {Name: "Feed 2", URL: "http://example.com/feed2", Type: "xml"},
 		},
 		inputFeeds: []*list.InputFeed{
-			{Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			{Name: "Feed 1 - Updated", URL: "http://example.com/feed1", Type: "html", Params: "abc"},
 			{Name: "Feed 3", URL: "http://example.com/feed3", Type: "xml"},
 		},
 		expectedFeeds: map[string]*feed.Feed{
-			feed.UID("http://example.com/feed1"): {Name: "Feed 1", URL: "http://example.com/feed1", Type: "xml"},
+			feed.UID("http://example.com/feed1"): {Name: "Feed 1 - Updated", URL: "http://example.com/feed1", Type: "html", Params: "abc"},
 			feed.UID("http://example.com/feed3"): {Name: "Feed 3", URL: "http://example.com/feed3", Type: "xml"},
 		},
 	}, {

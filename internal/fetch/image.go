@@ -42,7 +42,7 @@ func parseImage(data []byte, params any) ([]feed.RawItem, error) {
 	date := time.Now().Format("2006-01-02 15:04")
 	title := fmt.Sprintf("%s - %s", p.Title, date)
 
-	imgSrc := fmt.Sprintf("data:%s;base64,%s", p.MimeType, base64.URLEncoding.EncodeToString(data))
+	imgSrc := fmt.Sprintf("data:%s;base64,%s", p.MimeType, base64.StdEncoding.EncodeToString(data))
 	imgNode := &html.Node{
 		Type: html.ElementNode,
 		Data: "img",

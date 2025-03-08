@@ -124,7 +124,7 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 		}
 	}
 
-	cis := make(map[string]*candidateItem)
+	cisByURL := make(map[string]*candidateItem)
 	doc, err := html.ParseWithOptions(bytes.NewReader(data), html.ParseOptionEnableScripting(false))
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse HTML: %v", err)
@@ -149,10 +149,10 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 			if n.Type == html.ElementNode && n.Data == "a" {
 				ci := extractCandidateItem(n, p.BaseURL, p.AllowedPrefixes)
 				if ci != nil {
-					if cis[ci.url] == nil {
-						cis[ci.url] = ci
+					if cisByURL[ci.url] == nil {
+						cisByURL[ci.url] = ci
 					} else {
-						cis[ci.url].merge(ci)
+						cisByURL[ci.url].merge(ci)
 					}
 				}
 			}
@@ -164,17 +164,17 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 	}
 
 	var rawItems []feed.RawItem
-	for _, item := range cis {
+	for _, ci := range cisByURL {
 		title := "Unknown title"
-		if p.TitlePos < len(item.parts) {
-			title = item.parts[p.TitlePos]
-		} else if len(item.parts) > 0 {
-			title = item.parts[0]
+		if p.TitlePos < len(ci.parts) {
+			title = ci.parts[p.TitlePos]
+		} else if len(ci.parts) > 0 {
+			title = ci.parts[0]
 		}
 		rawItems = append(rawItems, feed.RawItem{
-			URL:     item.url,
+			URL:     ci.url,
 			Title:   title,
-			Content: strings.Join(item.parts, "<br/>"),
+			Content: strings.Join(ci.parts, "<br/>"),
 		})
 	}
 	sort.Slice(rawItems, func(i, j int) bool {

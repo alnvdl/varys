@@ -213,7 +213,7 @@ async function show_feed(uid, use_cache) {
             reset_controls({breadcrumbs: {uid: data.uid, name: data.name}, read_button: true});
             let item_list = document.createElement("div");
             item_list.classList = "item-list";
-            data.items.forEach(item => {
+            data.items?.forEach(item => {
                 item_list.appendChild(gen_item(item, {list_view: true}));
             });
             set_content(item_list);

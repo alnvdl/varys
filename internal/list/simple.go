@@ -212,7 +212,11 @@ func (l *Simple) LoadFeeds(inputFeeds []*InputFeed) {
 	newFeeds := make(map[string]*feed.Feed)
 	for _, inputFeed := range inputFeeds {
 		if f, ok := l.feeds[feed.UID(inputFeed.URL)]; ok {
-			// Feed is already in the list and is part of the input, keep it.
+			// Feed is already in the list and is part of the input, keep it,
+			// updating some fields.
+			f.Name = inputFeed.Name
+			f.Type = inputFeed.Type
+			f.Params = inputFeed.Params
 			newFeeds[f.UID()] = f
 			continue
 		} else {
@@ -248,6 +252,6 @@ func simpleStoreAllFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSu
 			itemMapper[item.UID()] = feed
 		}
 	}
-	allFeed.Prune(0)
+	allFeed.Prune(2048)
 	return allFeed.Summary(withItems, itemMapper)
 }
