@@ -24,8 +24,9 @@ type FetchParams struct {
 type parser func(data []byte, params any) ([]feed.RawItem, error)
 
 var parsers = map[string]parser{
-	feed.TypeXML:  parseXML,
-	feed.TypeHTML: parseHTML,
+	feed.TypeXML:   parseXML,
+	feed.TypeHTML:  parseHTML,
+	feed.TypeImage: parseImage,
 }
 
 // Fetch fetches and parses the feed identified by the given p parameters.
