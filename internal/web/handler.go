@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"strings"
 
 	"github.com/alnvdl/varys/internal/feed"
@@ -47,17 +48,78 @@ func NewHandler(p *HandlerParams) *handler {
 		ServeMux: http.NewServeMux(),
 		p:        p,
 	}
-	h.HandleFunc("POST /login", h.login)
-	h.HandleFunc("GET /api/feeds", h.requireAuthentication(h.feedList))
-	h.HandleFunc("GET /api/feeds/{fuid}", h.requireAuthentication(h.feed))
-	h.HandleFunc("POST /api/feeds/{fuid}/read", h.requireAuthentication(h.read))
-	h.HandleFunc("GET /api/feeds/{fuid}/items/{iuid}", h.requireAuthentication(h.item))
-	h.HandleFunc("POST /api/feeds/{fuid}/items/{iuid}/read", h.requireAuthentication(h.read))
-	h.Handle("GET /static/", http.FileServer(http.FS(staticFiles)))
-	h.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFileFS(w, r, staticFiles, "/static/index.html")
-	})
+
+	endpoints := []struct {
+		method  string
+		path    string
+		handler http.HandlerFunc
+		authn   bool
+	}{{method: "POST",
+		path:    "/login",
+		handler: h.login,
+		authn:   false,
+	}, {
+		method:  "GET",
+		path:    "/api/feeds",
+		handler: h.feedList,
+		authn:   true,
+	}, {
+		method:  "GET",
+		path:    "/api/feeds/{fuid}",
+		handler: h.feed,
+		authn:   true,
+	}, {
+		method:  "POST",
+		path:    "/api/feeds/{fuid}/read",
+		handler: h.read,
+		authn:   true,
+	}, {
+		method:  "GET",
+		path:    "/api/feeds/{fuid}/items/{iuid}",
+		handler: h.item,
+		authn:   true,
+	}, {
+		method:  "POST",
+		path:    "/api/feeds/{fuid}/items/{iuid}/read",
+		handler: h.read,
+		authn:   true,
+	}, {
+		method:  "GET",
+		path:    "/static/",
+		handler: http.FileServer(http.FS(staticFiles)).ServeHTTP,
+		authn:   false,
+	}, {
+		method: "GET",
+		path:   "/",
+		handler: func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, staticFiles, "/static/index.html")
+		},
+		authn: false,
+	}}
+
+	for _, e := range endpoints {
+		handler := e.handler
+		if e.authn {
+			handler = h.requireAuthentication(handler)
+		}
+		h.HandleFunc(e.method+" "+e.path, h.recover(handler))
+	}
+
 	return h
+}
+
+func (s *handler) recover(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if p := recover(); p != nil {
+				slog.Error("panic in handler",
+					slog.Any("panic", p),
+					slog.String("stack", string(debug.Stack())))
+				s.writeErrorResponse(w, http.StatusInternalServerError, "internal server error")
+			}
+		}()
+		handler(w, r)
+	}
 }
 
 func (s *handler) sessionCookie() *http.Cookie {
