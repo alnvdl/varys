@@ -249,7 +249,7 @@ async function show_item(fuid, iuid) {
         case 200:
             reset_controls({
                 breadcrumbs: {uid: data.feed, name: data.feed_name},
-                open_button: data.link,
+                open_button: data.url,
             });
             set_content(gen_item(data));
             window.scrollTo(0, 0);

@@ -51,7 +51,7 @@ type AtomEntry struct {
 	Summary   string   `xml:"summary"`
 }
 
-func parseXML(data []byte, _ map[string]string) ([]feed.RawItem, error) {
+func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	var feedItems []feed.RawItem
 
 	rss := RSS{}

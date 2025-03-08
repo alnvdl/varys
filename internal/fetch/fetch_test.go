@@ -52,7 +52,7 @@ func TestFetch(t *testing.T) {
 				</rss>`,
 		feedType:      "xml",
 		expectedItems: []feed.RawItem{},
-		expectedError: "cannot parse XML feed: cannot parse XML as either RSS or Atom: XML syntax error on line 3: expected attribute name in element\nXML syntax error on line 3: expected attribute name in element",
+		expectedError: "cannot parse feed: cannot parse XML as either RSS or Atom: XML syntax error on line 3: expected attribute name in element\nXML syntax error on line 3: expected attribute name in element",
 	}, {
 		desc: "invalid Atom feed",
 		serverData: `
@@ -61,7 +61,7 @@ func TestFetch(t *testing.T) {
 				</feed>`,
 		feedType:      "xml",
 		expectedItems: []feed.RawItem{},
-		expectedError: "cannot parse XML feed: cannot parse XML as either RSS or Atom: XML syntax error on line 3: expected attribute name in element\nXML syntax error on line 3: expected attribute name in element",
+		expectedError: "cannot parse feed: cannot parse XML as either RSS or Atom: XML syntax error on line 3: expected attribute name in element\nXML syntax error on line 3: expected attribute name in element",
 	}, {
 		desc: "a valid feed with more than one item and one invalid/empty item",
 		serverData: `

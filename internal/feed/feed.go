@@ -23,9 +23,9 @@ type Feed struct {
 	URL   string           `json:"url"`
 	Items map[string]*Item `json:"items"`
 
-	Params           map[string]string `json:"params"`
-	LastRefreshedAt  int64             `json:"updated_at"`
-	LastRefreshError string            `json:"error"`
+	Params           any    `json:"params"`
+	LastRefreshedAt  int64  `json:"updated_at"`
+	LastRefreshError string `json:"error"`
 }
 
 // FeedSummary is the external representation of the feed (e.g., for presenting
