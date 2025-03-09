@@ -39,7 +39,7 @@ func parseImage(data []byte, params any) ([]feed.RawItem, error) {
 		return nil, fmt.Errorf("cannot parse image params: %v", err)
 	}
 
-	date := time.Now().Format("2006-01-02 15:04")
+	date := time.Now().Format("2006-01-02 15:04:05 UTC")
 	title := fmt.Sprintf("%s - %s", p.Title, date)
 
 	imgSrc := fmt.Sprintf("data:%s;base64,%s", p.MimeType, base64.StdEncoding.EncodeToString(data))

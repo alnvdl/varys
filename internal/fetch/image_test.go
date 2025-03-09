@@ -49,7 +49,7 @@ func TestParseImage(t *testing.T) {
 			"title":     "Example Image",
 		},
 		expected: func(now time.Time) []feed.RawItem {
-			date := now.Format("2006-01-02 15:04")
+			date := now.Format("2006-01-02 15:04:05 UTC")
 			return []feed.RawItem{{
 				URL:     "https://example.com/image#039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81",
 				Title:   "Example Image - " + date,
