@@ -92,7 +92,8 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 			if allowedAttrs[node.Data][attr.Key] {
 				if (attr.Key == "href" || attr.Key == "src") &&
 					!strings.HasPrefix(attr.Val, "http://") &&
-					!strings.HasPrefix(attr.Val, "https://") {
+					!strings.HasPrefix(attr.Val, "https://") &&
+					!strings.HasPrefix(attr.Val, "data:") {
 					continue
 				}
 				attrs = append(attrs, html.Attribute(attr))

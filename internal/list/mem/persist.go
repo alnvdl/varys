@@ -81,7 +81,6 @@ func (l *List) autoPersist() {
 				}
 				continue
 			}
-			log.Info("persisting feed list to file")
 			if err := l.save(outputFile); err != nil {
 				log.Error("cannot persist feed list to file, will try again after another persist interval",
 					slog.String("err", err.Error()),
@@ -91,6 +90,7 @@ func (l *List) autoPersist() {
 			if l.persistCallback != nil {
 				l.persistCallback(err)
 			}
+			log.Info("persisted feed list to file")
 		case <-l.persistBackoff:
 			// Do nothing, and the persistence timer will restart.
 			log.Debug("auto-persist backoff received, resetting timer")

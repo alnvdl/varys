@@ -36,6 +36,7 @@ func (l *List) Refresh() {
 }
 
 func (l *List) initRefresh() {
+	slog.Info("running initial feed refresh")
 	l.Refresh()
 
 	l.wg.Add(1)
