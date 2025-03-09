@@ -8,8 +8,8 @@ Varys is based on an in-memory feed list that can be configured to be persisted
 to the disk and auto-refreshed. It also serves this feed list over an HTTP API,
 and provides a static mobile-friendly SPA for reading feeds.
 
-Varys is named after the GoT character who apparently was always up-to-date
-with his RSS feeds.
+Varys is named after the GoT character who was always up-to-date with his RSS
+feeds, which he used to call "little birds".
 
 ## Running
 To run Varys locally, just install Go 1.24+ and run `make dev_example`.

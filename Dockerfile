@@ -2,7 +2,7 @@ FROM golang:1.24-bookworm AS build
 
 COPY . /varys
 WORKDIR /varys
-RUN go build -o ./varys ./main.go
+RUN go build -o ./varys ./cmd/varys/main.go
 
 FROM ubuntu:jammy AS final
 
