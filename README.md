@@ -31,7 +31,7 @@ These are the supported feed types and their accepted parameters.
 
 ### Atom and RSS feeds (type `xml`)
 This type of feed can be used with traditional RSS or Atom XML feeds.
-```json
+```jsonc
 {
   "type": "xml",
   "name": "Example XML Feed",
@@ -71,7 +71,7 @@ pages.
 ### Image feeds (type `image`)
 This type of feed can be used for images that are updated frequently (e.g.,
 hosted webcam images or weather report charts).
-```json
+```jsonc
 {
   "type": "img",
   "name": "Example Image Feed",
@@ -326,7 +326,8 @@ All error responses follow this format:
 ## Deploying in Azure App Service
 
 1. Deploy the app in Azure following the [quick start guide](https://learn.microsoft.com/en-us/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-azure-portal).
-   When selecting the container, input `ghcr.io` as the registry and `alnvdl/varys:main` as the image, leaving the startup command blank.
+   When selecting the container, input `ghcr.io` as the registry and
+   `alnvdl/varys:main` as the image, leaving the startup command blank.
 
 2. Make sure to set the following environment variables in the deployment:
    | Environment variable                  | Value
@@ -342,6 +343,11 @@ All error responses follow this format:
 
    To generate secret random values, you can run `openssl rand 32 | base64`.
 
-3. While not being required, you may want to enable log persistence as well by following this [guide](https://learn.microsoft.com/en-us/azure/app-service/troubleshoot-diagnostic-logs#enable-application-logging-linuxcontainer).
+3. While not being required, you may want to enable log persistence as well by
+   following this
+   [guide](https://learn.microsoft.com/en-us/azure/app-service/troubleshoot-diagnostic-logs#enable-application-logging-linuxcontainer).
 
 4. You may need to restart the application to make sure it works well.
+
+5. To deploy new versions of the image, just restart the application (assuming
+   the deployment is using the `:main` tag mentioned in step 1).
