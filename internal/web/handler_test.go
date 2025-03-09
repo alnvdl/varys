@@ -76,6 +76,9 @@ func performLogin(t *testing.T, h http.Handler, params performLoginParams) *http
 	rr := httptest.NewRecorder()
 
 	h.ServeHTTP(rr, req)
+	if rr.Header().Get("Content-Security-Policy") == "" {
+		t.Errorf("expected Content-Security-Policy header to be set")
+	}
 
 	if params.ExpectSuccess {
 		if rr.Code != http.StatusOK {
@@ -234,6 +237,12 @@ func TestGetFeeds(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			h.ServeHTTP(rr, req)
+			if rr.Header().Get("Content-Type") == "" {
+				t.Errorf("expected Content-Type header to be set")
+			}
+			if rr.Header().Get("Content-Security-Policy") == "" {
+				t.Errorf("expected Content-Security-Policy header to be set")
+			}
 
 			if rr.Code != test.expectedStatus {
 				t.Errorf("expected status %v, got %v", test.expectedStatus, rr.Code)
@@ -308,6 +317,12 @@ func TestGetFeed(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			h.ServeHTTP(rr, req)
+			if rr.Header().Get("Content-Type") == "" {
+				t.Errorf("expected Content-Type header to be set")
+			}
+			if rr.Header().Get("Content-Security-Policy") == "" {
+				t.Errorf("expected Content-Security-Policy header to be set")
+			}
 
 			if rr.Code != test.expectedStatus {
 				t.Errorf("expected status %v, got %v", test.expectedStatus, rr.Code)
@@ -386,6 +401,12 @@ func TestGetItem(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			h.ServeHTTP(rr, req)
+			if rr.Header().Get("Content-Type") == "" {
+				t.Errorf("expected Content-Type header to be set")
+			}
+			if rr.Header().Get("Content-Security-Policy") == "" {
+				t.Errorf("expected Content-Security-Policy header to be set")
+			}
 
 			if rr.Code != test.expectedStatus {
 				t.Errorf("expected status %v, got %v", test.expectedStatus, rr.Code)
@@ -464,6 +485,9 @@ func TestMarkAsRead(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			h.ServeHTTP(rr, req)
+			if rr.Header().Get("Content-Security-Policy") == "" {
+				t.Errorf("expected Content-Security-Policy header to be set")
+			}
 
 			if rr.Code != test.expectedStatus {
 				t.Errorf("expected status %v, got %v", test.expectedStatus, rr.Code)
@@ -524,6 +548,9 @@ func TestStatic(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			h.ServeHTTP(rr, req)
+			if rr.Header().Get("Content-Security-Policy") == "" {
+				t.Errorf("expected Content-Security-Policy header to be set")
+			}
 
 			if rr.Code != test.expectedStatus {
 				t.Errorf("expected status %v, got %v", test.expectedStatus, rr.Code)

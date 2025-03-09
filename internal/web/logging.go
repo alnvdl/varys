@@ -19,7 +19,7 @@ func (w *loggingResponseWriter) WriteHeader(status int) {
 }
 
 // log wraps an HTTP handler and logs the request and response.
-func (s *handler) log(handler http.HandlerFunc) http.HandlerFunc {
+func log(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("request",
 			slog.String("method", r.Method),

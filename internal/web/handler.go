@@ -100,18 +100,18 @@ func NewHandler(p *HandlerParams) *handler {
 		if e.authn {
 			handler = h.requireAuthentication(handler)
 		}
-		h.HandleFunc(e.method+" "+e.path, h.recover(h.log(handler)))
+		h.HandleFunc(e.method+" "+e.path, logpanics(log(addCSPPolicyHeader(handler))))
 	}
 
 	return h
 }
 
-func (s *handler) jsonResponse(w http.ResponseWriter, v any) {
+func jsonResponse(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
 		slog.Error("cannot encode response", slog.String("err", err.Error()))
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
+		writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
 		return
 	}
 }
@@ -123,7 +123,7 @@ func (s *handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 	err := dec.Decode(&data)
 	if err != nil {
-		s.writeErrorResponse(w, http.StatusUnauthorized, "cannot decode request")
+		writeErrorResponse(w, http.StatusUnauthorized, "cannot decode request")
 		return
 	}
 
@@ -132,23 +132,23 @@ func (s *handler) login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		s.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+		writeErrorResponse(w, http.StatusUnauthorized, "unauthorized")
 	}
 }
 
 func (s *handler) feedList(w http.ResponseWriter, r *http.Request) {
-	s.jsonResponse(w, s.p.FeedList.Summary())
+	jsonResponse(w, s.p.FeedList.Summary())
 }
 
 func (s *handler) feed(w http.ResponseWriter, r *http.Request) {
 	fuid := r.PathValue("fuid")
 	feed := s.p.FeedList.FeedSummary(fuid)
 	if feed == nil {
-		s.writeErrorResponse(w, http.StatusNotFound, "feed not found")
+		writeErrorResponse(w, http.StatusNotFound, "feed not found")
 		return
 	}
 
-	s.jsonResponse(w, feed)
+	jsonResponse(w, feed)
 }
 
 func (s *handler) item(w http.ResponseWriter, r *http.Request) {
@@ -156,11 +156,11 @@ func (s *handler) item(w http.ResponseWriter, r *http.Request) {
 	iuid := r.PathValue("iuid")
 	item := s.p.FeedList.FeedItem(fuid, iuid)
 	if item == nil {
-		s.writeErrorResponse(w, http.StatusNotFound, "item not found")
+		writeErrorResponse(w, http.StatusNotFound, "item not found")
 		return
 	}
 
-	s.jsonResponse(w, item)
+	jsonResponse(w, item)
 }
 
 func (s *handler) read(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +168,7 @@ func (s *handler) read(w http.ResponseWriter, r *http.Request) {
 	iuid := r.PathValue("iuid")
 	done := s.p.FeedList.MarkRead(fuid, iuid)
 	if !done {
-		s.writeErrorResponse(w, http.StatusNotFound, "item or feed not found")
+		writeErrorResponse(w, http.StatusNotFound, "item or feed not found")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -182,11 +182,11 @@ type statusResponse struct {
 func (s *handler) status(w http.ResponseWriter, r *http.Request) {
 	bVersion, err := staticFiles.ReadFile("static/version")
 	if err != nil {
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot read version file")
+		writeErrorResponse(w, http.StatusInternalServerError, "cannot read version file")
 	}
 	version := strings.TrimSpace(string(bVersion))
 
-	s.jsonResponse(w, statusResponse{
+	jsonResponse(w, statusResponse{
 		Status:  "ok",
 		Version: version,
 	})

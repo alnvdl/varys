@@ -14,7 +14,8 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func (s *handler) writeErrorResponse(w http.ResponseWriter, code int, message string) {
+func writeErrorResponse(w http.ResponseWriter, code int, message string) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	err := json.NewEncoder(w).Encode(errorResponse{
 		Code:    fmt.Sprintf("%d", code),
@@ -26,16 +27,16 @@ func (s *handler) writeErrorResponse(w http.ResponseWriter, code int, message st
 	}
 }
 
-// recover wraps an HTTP handler and recovers from panics, logging the error
+// logpanics wraps an HTTP handler and recovers from panics, logging the error
 // and returning a 500 response.
-func (s *handler) recover(handler http.HandlerFunc) http.HandlerFunc {
+func logpanics(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if p := recover(); p != nil {
 				slog.Error("panic in handler",
 					slog.Any("panic", p),
 					slog.String("stack", string(debug.Stack())))
-				s.writeErrorResponse(w, http.StatusInternalServerError, "internal server error")
+				writeErrorResponse(w, http.StatusInternalServerError, "internal server error")
 			}
 		}()
 		handler(w, r)

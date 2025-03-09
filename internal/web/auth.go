@@ -63,7 +63,7 @@ func (s *handler) isAuthenticated(r *http.Request) bool {
 func (s *handler) requireAuthentication(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !s.isAuthenticated(r) {
-			s.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+			writeErrorResponse(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 		handler(w, r)
