@@ -40,7 +40,7 @@ func (l *List) Refresh(auto bool) {
 
 func (l *List) initRefresh() {
 	slog.Info("running initial feed refresh")
-	l.Refresh(false)
+	l.Refresh(true)
 
 	l.wg.Add(1)
 	go func() {

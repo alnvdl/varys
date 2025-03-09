@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/alnvdl/varys/internal/list"
@@ -92,10 +95,21 @@ func main() {
 		AccessToken: accessToken(),
 		SessionKey:  sessionKey(),
 	})
+
 	srv := &http.Server{
 		Addr:    listenAddress(),
 		Handler: h,
 	}
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-signals
+		feedList.Close()
+		slog.Info("shutting down server")
+		srv.Shutdown(context.Background())
+	}()
+
 	slog.Info("starting server", slog.String("address", srv.Addr))
 	srv.ListenAndServe()
 }

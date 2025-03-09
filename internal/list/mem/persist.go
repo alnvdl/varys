@@ -63,34 +63,41 @@ func (l *List) autoPersist() {
 		slog.String("dbFilePath", l.dbFilePath),
 		slog.Duration("persistInterval", l.persistInterval),
 	)
+	persist := func(reason string) {
+		outputFile, err := os.OpenFile(l.dbFilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
+		if err != nil {
+			log.Error("cannot open feed list file for writing",
+				slog.String("reason", reason),
+				slog.String("err", err.Error()),
+			)
+			if l.persistCallback != nil {
+				l.persistCallback(err)
+			}
+			return
+		}
+		if err := l.save(outputFile); err != nil {
+			log.Error("cannot persist feed list to file",
+				slog.String("reason", reason),
+				slog.String("err", err.Error()),
+			)
+		}
+		outputFile.Close()
+		if l.persistCallback != nil {
+			l.persistCallback(err)
+		}
+		log.Info("persisted feed list to file", slog.String("reason", reason))
+	}
+
 	log.Info("auto-persist enabled")
 	for {
 		select {
 		case <-l.close:
 			log.Info("stopping auto-persist")
+			persist("close")
 			return
 		case <-time.After(l.persistInterval):
 			log.Info("auto-persist interval reached")
-			outputFile, err := os.OpenFile(l.dbFilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
-			if err != nil {
-				log.Error("cannot open feed list file for writing, will try again after another persist interval",
-					slog.String("err", err.Error()),
-				)
-				if l.persistCallback != nil {
-					l.persistCallback(err)
-				}
-				continue
-			}
-			if err := l.save(outputFile); err != nil {
-				log.Error("cannot persist feed list to file, will try again after another persist interval",
-					slog.String("err", err.Error()),
-				)
-			}
-			outputFile.Close()
-			if l.persistCallback != nil {
-				l.persistCallback(err)
-			}
-			log.Info("persisted feed list to file")
+			persist("auto-refresh")
 		case <-l.persistBackoff:
 			// Do nothing, and the persistence timer will restart.
 			log.Debug("auto-persist backoff received, resetting timer")

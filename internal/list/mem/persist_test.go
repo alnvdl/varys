@@ -232,8 +232,16 @@ func TestPersistence(t *testing.T) {
 		}
 	}
 
-	// Close the list.
-	l.Close()
+	// Close the list and check it was persisted again.
+	go l.Close()
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatalf("expected close persistence to be triggered")
+	case err := <-persistNotify:
+		if err != nil {
+			t.Fatalf("expected no persistence error, got %v", err)
+		}
+	}
 }
 
 func TestNoPersistenceIfLoadFails(t *testing.T) {
