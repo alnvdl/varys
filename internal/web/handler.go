@@ -26,7 +26,6 @@ type FeedLister interface {
 	FeedSummary(uid string) *feed.FeedSummary
 	FeedItem(fuid, iuid string) *feed.ItemSummary
 	MarkRead(fuid, iuid string) bool
-	Refresh()
 }
 
 // HandlerParams contains the parameters for creating a new API server.

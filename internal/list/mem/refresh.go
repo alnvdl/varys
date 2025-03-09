@@ -8,9 +8,12 @@ import (
 	"github.com/alnvdl/varys/internal/fetch"
 )
 
-// Refresh fetches all feeds in the list and then refreshes them.
-func (l *List) Refresh() {
-	defer l.delayPersist()
+// Refresh fetches all feeds in the list and then refreshes them. The auto flag
+// indicates whether this refresh was triggered automatically or manually.
+func (l *List) Refresh(auto bool) {
+	if !auto {
+		defer l.delayPersist()
+	}
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -37,7 +40,7 @@ func (l *List) Refresh() {
 
 func (l *List) initRefresh() {
 	slog.Info("running initial feed refresh")
-	l.Refresh()
+	l.Refresh(false)
 
 	l.wg.Add(1)
 	go func() {
@@ -63,7 +66,7 @@ func (l *List) autoRefresh() {
 			return
 		case <-time.After(l.refreshInterval):
 			log.Info("auto-refresh interval reached")
-			l.Refresh()
+			l.Refresh(true)
 			log.Info("auto-refresh completed")
 		}
 	}

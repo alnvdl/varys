@@ -132,7 +132,7 @@ func TestListRefresh(t *testing.T) {
 				Fetcher: mockFetcher,
 			})
 			mem.SetFeeds(l, test.initialFeeds)
-			l.Refresh()
+			l.Refresh(false)
 			for key, expectedFeed := range test.expectedFeeds {
 				actualFeed, ok := mem.Feeds(l)[key]
 				if !ok {
