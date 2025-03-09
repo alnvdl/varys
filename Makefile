@@ -11,5 +11,6 @@ test:
 	go test ./... -cover -coverprofile=/tmp/cover.out -timeout=10s
 
 version:
-	git rev-parse HEAD > ./internal/web/static/version
+	git update-index --assume-unchanged ./internal/web/static/version
+	git describe --always --dirty > ./internal/web/static/version
 	echo "Version set to: $$(cat ./internal/web/static/version)"
