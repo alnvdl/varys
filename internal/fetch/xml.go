@@ -74,9 +74,9 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 		}
 		for pos, item := range items {
 			feedItems = append(feedItems, feed.RawItem{
-				URL:      silentlySanitizePlainText(link(item.Link, baseURL)),
-				Title:    silentlySanitizePlainText(item.Title),
-				Authors:  silentlySanitizePlainText(strings.Join(append(item.Authors, item.Creator...), ", ")),
+				URL:      link(item.Link, baseURL),
+				Title:    item.Title,
+				Authors:  strings.Join(append(item.Authors, item.Creator...), ", "),
 				Content:  silentlySanitizeHTML(coalesce(item.Encoded, item.Description)),
 				Position: pos,
 			})
@@ -89,10 +89,10 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 		baseURL := link(atom.Link.Href, "")
 		for pos, entry := range atom.Entries {
 			feedItems = append(feedItems, feed.RawItem{
-				URL:     silentlySanitizePlainText(link(entry.Link.Href, baseURL)),
-				Title:   silentlySanitizePlainText(entry.Title),
-				Authors: silentlySanitizePlainText(strings.Join(entry.Authors, ", ")),
-				Content: silentlySanitizeHTML(coalesce(entry.Content, entry.Summary)),
+				URL:      link(entry.Link.Href, baseURL),
+				Title:    entry.Title,
+				Authors:  strings.Join(entry.Authors, ", "),
+				Content:  silentlySanitizeHTML(coalesce(entry.Content, entry.Summary)),
 				Position: pos,
 			})
 		}

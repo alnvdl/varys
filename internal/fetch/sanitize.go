@@ -50,13 +50,10 @@ var defaultAllowedAttrs = map[string]map[string]bool{
 	"img":     {"alt": true, "src": true},
 }
 
+// silentlySanitizeHTML works like sanitizeHTML but it uses a default
+// configuration and silences errors.
 func silentlySanitizeHTML(input string) string {
 	sanitized, _ := sanitizeHTML(input, defaultAllowedTags, defaultAllowedAttrs)
-	return sanitized
-}
-
-func silentlySanitizePlainText(input string) string {
-	sanitized, _ := sanitizeHTML(input, nil, nil)
 	return sanitized
 }
 

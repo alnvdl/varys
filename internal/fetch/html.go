@@ -186,8 +186,8 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 			title = ci.parts[0]
 		}
 		rawItems = append(rawItems, feed.RawItem{
-			URL:      silentlySanitizePlainText(ci.url),
-			Title:    silentlySanitizePlainText(title),
+			URL:      ci.url,
+			Title:    title,
 			Content:  silentlySanitizeHTML(strings.Join(ci.parts, "<br/>")),
 			Position: ci.position,
 		})

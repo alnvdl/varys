@@ -29,14 +29,30 @@ type Feed struct {
 // FeedSummary is the external representation of the feed (e.g., for presenting
 // to users).
 type FeedSummary struct {
-	UID         string         `json:"uid"`
-	URL         string         `json:"url"`
-	Name        string         `json:"name"`
-	Items       []*ItemSummary `json:"items,omitempty"`
-	LastUpdated int64          `json:"last_updated"`
-	LastError   string         `json:"last_error"`
-	ItemCount   int            `json:"item_count"`
-	ReadCount   int            `json:"read_count"`
+	// UID is the unique identifier of the feed.
+	UID string `json:"uid"`
+
+	// URL is the URL from which the feed is fetched.
+	URL string `json:"url"`
+
+	// Name is the name of the feed as defined by the user.
+	Name string `json:"name"`
+
+	// Items is a list of items in the feed. It is usually empty, unless
+	// explicitly requested.
+	Items []*ItemSummary `json:"items,omitempty"`
+
+	// LastUpdated is the time when the feed was last fetched.
+	LastUpdated int64 `json:"last_updated"`
+
+	// LastError is the last error that occurred when refreshing the feed.
+	LastError string `json:"last_error"`
+
+	// ItemCount is the number of items in the feed.
+	ItemCount int `json:"item_count"`
+
+	// ReadCount is the number of items in the feed that were marked as read.
+	ReadCount int `json:"read_count"`
 }
 
 func (f *Feed) UID() string {

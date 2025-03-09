@@ -59,8 +59,8 @@ func parseImage(data []byte, params any) ([]feed.RawItem, error) {
 	urlWithHash := fmt.Sprintf("%s#%s", p.URL, hashStr)
 
 	rawItem := feed.RawItem{
-		URL:     silentlySanitizePlainText(urlWithHash),
-		Title:   silentlySanitizePlainText(title),
+		URL:     urlWithHash,
+		Title:   title,
 		Content: silentlySanitizeHTML(buf.String()),
 	}
 

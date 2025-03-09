@@ -53,15 +53,39 @@ type Item struct {
 // ItemSummary is the external representation of the item (e.g., for presenting
 // to users).
 type ItemSummary struct {
-	UID       string `json:"uid"`
-	FeedUID   string `json:"feed_uid"`
-	FeedName  string `json:"feed_name"`
-	URL       string `json:"url"`
-	Title     string `json:"title"`
-	Timestamp int64  `json:"timestamp"`
-	Authors   string `json:"authors"`
-	Read      bool   `json:"read"`
-	Content   string `json:"content,omitempty"`
+	// UID is the unique identifier of the item.
+	UID string `json:"uid"`
+
+	// FeedUID is the UID of the feed that this item belongs to.
+	FeedUID string `json:"feed_uid"`
+
+	// FeedName is the name of the feed that this item belongs to.
+	FeedName string `json:"feed_name"`
+
+	// URL is the URL of the item. It comes directly from the feed and is not
+	// sanitized. Do not embed it in the page directly without proper measures.
+	URL string `json:"url"`
+
+	// Title is a short title or description of the item. It comes directly
+	// from the feed and is not sanitized. Do not embed it in the page directly
+	// without proper measures.
+	Title string `json:"title"`
+
+	// Timestamp is the time when the item was first seen.
+	Timestamp int64 `json:"timestamp"`
+
+	// Authors is a short comma-separated summary of authors of the item. It
+	// comes directly from the feed and is not sanitized. Do not embed it in
+	// the page directly without proper measures.
+	Authors string `json:"authors"`
+
+	// Read is true if the item was marked as read by the user.
+	Read bool `json:"read"`
+
+	// Content is the full content of the item, usually a sanitized HTML
+	// fragment. It comes directly from the feed and may safely be embedded in
+	// the page directly.
+	Content string `json:"content,omitempty"`
 }
 
 // Refresh updates the item with certain changeable fields coming from the new

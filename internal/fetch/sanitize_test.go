@@ -1,7 +1,6 @@
 package fetch_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/alnvdl/varys/internal/fetch"
@@ -14,6 +13,12 @@ func TestSanitizeHTML(t *testing.T) {
 	}{{
 		input:    `just some text`,
 		expected: `just some text`,
+	}, {
+		input: `<div>
+			&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;
+			<script>alert('xss1')</script><p>Paragraph</p>
+		</div>`,
+		expected: `<div><p>Paragraph</p></div>`,
 	}, {
 		input:    `<div><script>alert('xss1')</script><p>Paragraph</p></div>`,
 		expected: `<div><p>Paragraph</p></div>`,
@@ -66,50 +71,7 @@ func TestSanitizeHTML(t *testing.T) {
 	for _, test := range tests {
 		result := fetch.SilentlySanitizeHTML(test.input)
 		if result != test.expected {
-			t.Errorf("SilentlySanitizeHTML(`%s`) = `%s`; want `%s`", test.input, result, test.expected)
-		}
-	}
-}
-
-func TestSanitizePlainText(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{{
-		input:    `just some text`,
-		expected: `just some text`,
-	}, {
-		input:    `Paragraph 1<div><p>Paragraph 2</p></div>`,
-		expected: `Paragraph 1`,
-	}, {
-		input:    `Example<a href="http://example.com" title="example">Link</a>`,
-		expected: `Example`,
-	}, {
-		input:    `<img src="http://example.com/image.jpg" alt="image">`,
-		expected: ``,
-	}, {
-		input:    `<div><figure><img src="http://example.com/image.jpg" alt="image"><figcaption>Image</figcaption></figure></div>Content`,
-		expected: `Content`,
-	}, {
-		input: `
-			Content 1
-			<div>
-				<script>alert('xss1')</script>
-				<p>Paragraph 2</p>
-				<script>alert('xss2')</script>
-			</div>
-			Content 3`,
-		expected: "Content 1\n\t\t\t\n\t\t\tContent 3",
-	}}
-
-	renderWhitespace := func(s string) string {
-		return strings.ReplaceAll(strings.ReplaceAll(s, "\n", "\\n"), "\t", "\\t")
-	}
-
-	for _, test := range tests {
-		result := fetch.SilentlySanitizePlainText(test.input)
-		if result != test.expected {
-			t.Errorf("SilentlySanitizePlainText(`%s`) = `%s`; want `%s`", test.input, renderWhitespace(result), renderWhitespace(test.expected))
+			t.Errorf("unexpected sanitized HTML: want `%s`, got `%s`", test.expected, result)
 		}
 	}
 }
