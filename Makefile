@@ -9,3 +9,6 @@ devquick:
 
 test:
 	go test ./... -cover -coverprofile=/tmp/cover.out -timeout=10s
+
+version:
+	git rev-parse HEAD > ./internal/web/static/version

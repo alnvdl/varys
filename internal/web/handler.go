@@ -84,6 +84,11 @@ func NewHandler(p *HandlerParams) *handler {
 		authn:   true,
 	}, {
 		method:  "GET",
+		path:    "/status",
+		handler: h.status,
+		authn:   false,
+	}, {
+		method:  "GET",
 		path:    "/static/",
 		handler: http.FileServer(http.FS(staticFiles)).ServeHTTP,
 		authn:   false,
@@ -91,7 +96,7 @@ func NewHandler(p *HandlerParams) *handler {
 		method: "GET",
 		path:   "/",
 		handler: func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFileFS(w, r, staticFiles, "/static/index.html")
+			http.ServeFileFS(w, r, staticFiles, "static/index.html")
 		},
 		authn: false,
 	}}
@@ -260,4 +265,25 @@ func (s *handler) read(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+type statusResponse struct {
+	Status  string `json:"status"`
+	Version string `json:"version"`
+}
+
+func (s *handler) status(w http.ResponseWriter, r *http.Request) {
+	bVersion, err := staticFiles.ReadFile("static/version")
+	if err != nil {
+		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot read version file")
+	}
+	version := strings.TrimSpace(string(bVersion))
+
+	err = json.NewEncoder(w).Encode(statusResponse{
+		Status:  "ok",
+		Version: version,
+	})
+	if err != nil {
+		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode status response")
+	}
 }

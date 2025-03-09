@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,10 +18,11 @@ import (
 )
 
 const (
-	defaultDBPath          = "db.json"
-	defaultListenAddress   = ":8080"
-	defaultPersistInterval = 1 * time.Minute
-	defaultRefreshInterval = 5 * time.Minute
+	defaultDBPath              = "db.json"
+	defaultPort                = "8080"
+	defaultPersistInterval     = 1 * time.Minute
+	defaultRefreshInterval     = 5 * time.Minute
+	defaultHealthCheckInterval = 3 * time.Minute
 )
 
 func dbPath() string {
@@ -31,12 +33,12 @@ func dbPath() string {
 	return dbPath
 }
 
-func listenAddress() string {
-	listenAddress := os.Getenv("LISTEN_ADDRESS")
-	if listenAddress == "" {
-		return defaultListenAddress
+func port() string {
+	port := os.Getenv("PORT")
+	if port == "" {
+		return defaultPort
 	}
-	return listenAddress
+	return port
 }
 
 func sessionKey() []byte {
@@ -74,12 +76,45 @@ func refreshInterval() time.Duration {
 	return defaultRefreshInterval
 }
 
+func healthCheckInterval() time.Duration {
+	hci := os.Getenv("HEALTH_CHECK_INTERVAL")
+	if d, err := time.ParseDuration(hci); err == nil {
+		return d
+	}
+	return defaultHealthCheckInterval
+}
+
 func feeds() []*list.InputFeed {
 	var feeds []*list.InputFeed
 	if err := json.Unmarshal([]byte(os.Getenv("FEEDS")), &feeds); err != nil {
 		slog.Error("cannot parse feeds", slog.String("err", err.Error()))
 	}
 	return feeds
+}
+
+// serverHealthCheck periodically checks the server health by making a request
+// to the /status endpoint.
+func serverHealthCheck(interval time.Duration, port string, close chan bool) {
+	for {
+		select {
+		case <-time.After(interval):
+			res, err := http.Get(fmt.Sprintf("http://localhost:%s/status", port))
+			if err != nil {
+				slog.Error("error making health check request",
+					slog.String("err", err.Error()))
+				continue
+			}
+			if res.StatusCode == http.StatusOK {
+				slog.Info("server is healthy")
+			} else {
+				slog.Error("server is not healthy",
+					slog.Int("status_code", res.StatusCode))
+			}
+		case <-close:
+			slog.Info("stopping keep-alive mechanism")
+			return
+		}
+	}
 }
 
 func main() {
@@ -97,19 +132,26 @@ func main() {
 	})
 
 	srv := &http.Server{
-		Addr:    listenAddress(),
+		Addr:    ":" + port(),
 		Handler: h,
 	}
+
+	healthCheck := make(chan bool)
+	go serverHealthCheck(healthCheckInterval(), port(), healthCheck)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-signals
+
+		close(healthCheck)
 		feedList.Close()
 		slog.Info("shutting down server")
 		srv.Shutdown(context.Background())
 	}()
 
 	slog.Info("starting server", slog.String("address", srv.Addr))
-	srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
