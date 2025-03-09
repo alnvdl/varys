@@ -74,6 +74,10 @@ type ListParams struct {
 }
 
 // NewList creates a new in-memory feed list based on the given p parameters.
+// It will also initialize the persistence mechanism (if dbFilePath is given),
+// load the initial feeds and start the auto-refresh mechanism. Note that it
+// will not persist the feed list to the file until the first auto-persistence
+// interval is reached.
 func NewList(p ListParams) *List {
 	if p.Fetcher == nil {
 		p.Fetcher = fetch.Fetch
@@ -89,8 +93,8 @@ func NewList(p ListParams) *List {
 		persistCallback: p.PersistCallback,
 		close:           make(chan bool),
 	}
-	l.LoadFeeds(p.InitialFeeds)
 	l.initPersist()
+	l.LoadFeeds(p.InitialFeeds)
 	l.initRefresh()
 	return l
 }
@@ -193,7 +197,12 @@ func (l *List) LoadFeeds(inputFeeds []*list.InputFeed) {
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
-	slog.Info("loading feeds")
+	slog.Info("loading feeds",
+		slog.Int("currentFeedCount", len(l.feeds)),
+		slog.Int("inputFeedCount", len(inputFeeds)),
+	)
+
+	var kept, added, discarded int
 	newFeeds := make(map[string]*feed.Feed)
 	for _, inputFeed := range inputFeeds {
 		if f, ok := l.feeds[feed.UID(inputFeed.URL)]; ok {
@@ -203,6 +212,7 @@ func (l *List) LoadFeeds(inputFeeds []*list.InputFeed) {
 			f.Type = inputFeed.Type
 			f.Params = inputFeed.Params
 			newFeeds[f.UID()] = f
+			kept++
 			continue
 		} else {
 			// Feed does not yet exist, add it to the list.
@@ -213,11 +223,23 @@ func (l *List) LoadFeeds(inputFeeds []*list.InputFeed) {
 				Params: inputFeed.Params,
 			}
 			newFeeds[newFeed.UID()] = newFeed
+			added++
 		}
 		// Feeds that were in the list but are not part of the input are
 		// discarded.
 	}
+	for feed := range l.feeds {
+		if _, ok := newFeeds[feed]; !ok {
+			discarded++
+		}
+	}
 
+	slog.Info("finished loading feeds",
+		slog.Int("kept", kept),
+		slog.Int("added", added),
+		slog.Int("discarded", discarded),
+		slog.Int("feedCount", len(newFeeds)),
+	)
 	l.feeds = newFeeds
 }
 

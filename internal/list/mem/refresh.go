@@ -19,6 +19,10 @@ func (l *List) Refresh(auto bool) {
 
 	wg := sync.WaitGroup{}
 
+	slog.Info("refreshing feeds",
+		slog.Bool("auto", auto),
+		slog.Int("feedCount", len(l.feeds)),
+	)
 	for _, feed := range l.feeds {
 		wg.Add(1)
 		go func() {
