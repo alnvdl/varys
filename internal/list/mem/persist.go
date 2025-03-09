@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (l *List) initPersistence() {
+func (l *List) initPersist() {
 	log := slog.With(slog.String("dbFilePath", l.dbFilePath))
 
 	if l.dbFilePath != "" {
@@ -98,8 +98,12 @@ func (l *List) autoPersist() {
 	}
 }
 
-func (l *List) backoffPersist() {
-	l.persistBackoff <- true
+func (l *List) delayPersist() {
+	select {
+	case l.persistBackoff <- true:
+	default:
+		slog.Info("failed attempt to delay auto-persist; auto-persist may not be running")
+	}
 }
 
 func (l *List) save(w io.Writer) error {

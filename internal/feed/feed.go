@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
-
-	"github.com/alnvdl/varys/internal/timeutil"
 )
 
 const maxFeedItems = 100
@@ -68,7 +66,7 @@ func (f *Feed) Prune(n int) {
 
 // Refresh updates the feed with information coming from raw items and the
 // given fetch error, and then prunes the feed to the maximum number of items.
-func (f *Feed) Refresh(items []RawItem, fetchErr error) {
+func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	log := slog.With(slog.String("feedName", f.Name))
 	var fetchErrMsg string
 	if fetchErr != nil {
@@ -92,7 +90,6 @@ func (f *Feed) Refresh(items []RawItem, fetchErr error) {
 		f.Items = make(map[string]*Item)
 	}
 
-	ts := timeutil.Now()
 	for i, item := range items {
 		if !item.IsValid() {
 			log.Info("detected invalid item in feed, skipping", slog.Int("itemPos", i))
@@ -114,14 +111,13 @@ func (f *Feed) Refresh(items []RawItem, fetchErr error) {
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 
-// SortedItems returns the items in the feed sorted by timestamp in descending
-// order.
+// SortedItems returns the items in the feed sorted by timestamp and position
+// in descending order.
 func (f *Feed) SortedItems() []Item {
 	var sortedItems []Item
 	for _, item := range f.Items {
 		sortedItems = append(sortedItems, *item)
 	}
-	// Sort items by timestamp and then position in descending order.
 	sort.Slice(sortedItems, func(i, j int) bool {
 		if sortedItems[i].Timestamp == sortedItems[j].Timestamp {
 			return sortedItems[i].Position < sortedItems[j].Position

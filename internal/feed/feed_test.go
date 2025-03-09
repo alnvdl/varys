@@ -454,7 +454,7 @@ func TestSummary(t *testing.T) {
 }
 
 func TestFeedRefresh(t *testing.T) {
-	now := time.Now().Unix()
+	now := timeutil.Now()
 
 	tests := []struct {
 		desc           string
@@ -541,7 +541,7 @@ func TestFeedRefresh(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			f := test.initialFeed
-			f.Refresh(test.items, test.fetchErr)
+			f.Refresh(test.items, now, test.fetchErr)
 			checkFeed(t, f, test.expectedFeed)
 		})
 	}

@@ -1,13 +1,11 @@
 package mem_test
 
 import (
-	"errors"
 	"fmt"
 	"maps"
 	"testing"
 
 	"github.com/alnvdl/varys/internal/feed"
-	"github.com/alnvdl/varys/internal/fetch"
 	"github.com/alnvdl/varys/internal/list"
 	"github.com/alnvdl/varys/internal/list/mem"
 	"github.com/alnvdl/varys/internal/timeutil"
@@ -199,8 +197,8 @@ func TestListFeedSummary(t *testing.T) {
 			URL:       "http://example.com/feed1",
 			ItemCount: 1,
 			Items: []*feed.ItemSummary{{
-				UID:       "4683f48c8cba24662d0442547a138a6ccd51a419fbf1810598f28be6385b6cc8",
-				FeedUID:   "6ab3d6443b458a4a036ac06fbe6f5b9bc687c69e38ebca0f95a57e47c72a6c50",
+				UID:       feed.UID("http://example.com/item1"),
+				FeedUID:   feed.UID("http://example.com/feed1"),
 				FeedName:  "Feed 1",
 				URL:       "http://example.com/item1",
 				Title:     "Item 1",
@@ -240,15 +238,15 @@ func TestListFeedSummary(t *testing.T) {
 			Name:      "All",
 			ItemCount: 2,
 			Items: []*feed.ItemSummary{{
-				UID:       "4683f48c8cba24662d0442547a138a6ccd51a419fbf1810598f28be6385b6cc8",
-				FeedUID:   "6ab3d6443b458a4a036ac06fbe6f5b9bc687c69e38ebca0f95a57e47c72a6c50",
+				UID:       feed.UID("http://example.com/item1"),
+				FeedUID:   feed.UID("http://example.com/feed1"),
 				FeedName:  "Feed 1",
 				URL:       "http://example.com/item1",
 				Title:     "Item 1",
 				Timestamp: 2,
 			}, {
-				UID:       "cd4519e09135ae2b53e975db2e286158cba014d50c9cb14ffded6cf9f5ae94ec",
-				FeedUID:   "978bd385ffb3be1c42308b4c0e9755c747211367cf3338e3e864cd79f82e3222",
+				UID:       feed.UID("http://example.com/item2"),
+				FeedUID:   feed.UID("http://example.com/feed2"),
 				FeedName:  "Feed 2",
 				URL:       "http://example.com/item2",
 				Title:     "Item 2",
@@ -745,135 +743,6 @@ func TestListMarkRead(t *testing.T) {
 			if result != test.expectedResult {
 				t.Errorf("expected result %v, got %v", test.expectedResult, result)
 			}
-			for key, expectedFeed := range test.expectedFeeds {
-				actualFeed, ok := mem.Feeds(l)[key]
-				if !ok {
-					t.Fatalf("expected feed %s to be present", key)
-				}
-				checkFeed(t, *actualFeed, *expectedFeed)
-			}
-		})
-	}
-}
-
-func TestListRefresh(t *testing.T) {
-	t.Parallel()
-	now := timeutil.Now()
-
-	mockFetcher := func(p fetch.FetchParams) ([]feed.RawItem, error) {
-		switch p.URL {
-		case "http://example.com/feed1":
-			return []feed.RawItem{
-				{URL: "http://example.com/item1", Title: "Item 1"},
-			}, nil
-		case "http://example.com/feed2":
-			return []feed.RawItem{
-				{URL: "http://example.com/item2", Title: "Item 2"},
-			}, nil
-		case "http://example.com/feed3":
-			return nil, errors.New("oh no")
-		default:
-			return nil, errors.New("unknown feed URL")
-		}
-	}
-
-	tests := []struct {
-		desc           string
-		initialFeeds   map[string]*feed.Feed
-		expectedFeeds  map[string]*feed.Feed
-		expectedErrMsg string
-	}{{
-		desc:          "feed list is empty",
-		initialFeeds:  map[string]*feed.Feed{},
-		expectedFeeds: map[string]*feed.Feed{},
-	}, {
-		desc: "feed list has 1 feed",
-		initialFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name:  "Feed 1",
-				URL:   "http://example.com/feed1",
-				Items: map[string]*feed.Item{},
-			},
-		},
-		expectedFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name: "Feed 1",
-				URL:  "http://example.com/feed1",
-				Items: map[string]*feed.Item{
-					feed.UID("http://example.com/item1"): {
-						RawItem: feed.RawItem{
-							URL:   "http://example.com/item1",
-							Title: "Item 1",
-						},
-						FeedUID:   feed.UID("http://example.com/feed1"),
-						Timestamp: now},
-				},
-				LastRefreshedAt: now,
-			},
-		},
-	}, {
-		desc: "feed list has 3 feeds",
-		initialFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name:  "Feed 1",
-				URL:   "http://example.com/feed1",
-				Items: map[string]*feed.Item{},
-			},
-			"feed2": {
-				Name:  "Feed 2",
-				URL:   "http://example.com/feed2",
-				Items: map[string]*feed.Item{},
-			},
-			"feed3": {
-				Name:  "Feed 3",
-				URL:   "http://example.com/feed3",
-				Items: map[string]*feed.Item{},
-			},
-		},
-		expectedFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name: "Feed 1",
-				URL:  "http://example.com/feed1",
-				Items: map[string]*feed.Item{
-					feed.UID("http://example.com/item1"): {
-						RawItem: feed.RawItem{
-							URL:   "http://example.com/item1",
-							Title: "Item 1",
-						},
-						FeedUID:   feed.UID("http://example.com/feed1"),
-						Timestamp: now},
-				},
-				LastRefreshedAt: now,
-			},
-			"feed2": {
-				Name: "Feed 2",
-				URL:  "http://example.com/feed2",
-				Items: map[string]*feed.Item{
-					feed.UID("http://example.com/item2"): {
-						RawItem: feed.RawItem{
-							URL:   "http://example.com/item2",
-							Title: "Item 2",
-						},
-						FeedUID:   feed.UID("http://example.com/feed2"),
-						Timestamp: now},
-				},
-				LastRefreshedAt: now,
-			},
-			"feed3": {
-				Name:             "Feed 3",
-				URL:              "http://example.com/feed3",
-				LastRefreshError: "oh no",
-			},
-		},
-	}}
-
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{
-				Fetcher: mockFetcher,
-			})
-			mem.SetFeeds(l, test.initialFeeds)
-			l.Refresh()
 			for key, expectedFeed := range test.expectedFeeds {
 				actualFeed, ok := mem.Feeds(l)[key]
 				if !ok {

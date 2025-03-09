@@ -156,7 +156,7 @@ func TestFetch(t *testing.T) {
 				feedURL = server.URL
 			}
 
-			items, err := fetch.Fetch(fetch.FetchParams{
+			items, _, err := fetch.Fetch(fetch.FetchParams{
 				URL:      feedURL,
 				FeedName: test.desc,
 				FeedType: test.feedType,

@@ -1,5 +1,5 @@
-// Package list provides implementations of feed lists that use their own
-// fetching and persistence mechanisms.
+// Package mem provides implementations of an in-memory feed list with its own
+// auto-refresh and auto-persistence mechanisms.
 package mem
 
 import (
@@ -24,7 +24,8 @@ type List struct {
 	muFeeds sync.Mutex
 
 	refreshInterval time.Duration
-	fetcher         func(p fetch.FetchParams) ([]feed.RawItem, error)
+	refreshCallback func()
+	fetcher         func(p fetch.FetchParams) ([]feed.RawItem, int64, error)
 
 	dbFilePath      string
 	persistInterval time.Duration
@@ -41,6 +42,10 @@ type serializedList struct {
 
 // ListParams is the configuration for creating a new MemList.
 type ListParams struct {
+	// InitialFeeds provides a way to initialize the feed list with some feeds.
+	// See LoadFeeds for more information on how this is used.
+	InitialFeeds []*list.InputFeed
+
 	// DBFilePath is the path to the file in FS where the feed list is
 	// serialized to and deserialized from. If empty, the feed list will not be
 	// persisted and will be kept only in memory.
@@ -50,18 +55,22 @@ type ListParams struct {
 	// the file. If 0, auto-persistence will be disabled.
 	PersistInterval time.Duration
 
-	// RefreshInterval is the interval at which feeds are refreshed. If 0,
-	// auto-refresh will be disabled.
-	RefreshInterval time.Duration
-
-	// Fetcher is the function used to fetch feeds. If nil, a default fetcher
-	// will be used.
-	Fetcher func(p fetch.FetchParams) ([]feed.RawItem, error)
-
 	// PersistCallback is an optional function to be called after each
 	// persistence operation is attempted (successfully or not depending as
 	// given by err).
 	PersistCallback func(err error)
+
+	// RefreshInterval is the interval at which feeds are refreshed. If 0,
+	// auto-refresh will be disabled.
+	RefreshInterval time.Duration
+
+	// RefreshCallback is an optional function to be called after each
+	// auto-refresh operation.
+	RefreshCallback func()
+
+	// Fetcher is the function used to fetch feeds. If nil, a default fetcher
+	// will be used.
+	Fetcher func(p fetch.FetchParams) ([]feed.RawItem, int64, error)
 }
 
 // NewList creates a new in-memory feed list based on the given p parameters.
@@ -73,19 +82,22 @@ func NewList(p ListParams) *List {
 		feeds:           make(map[string]*feed.Feed),
 		dbFilePath:      p.DBFilePath,
 		refreshInterval: p.RefreshInterval,
+		refreshCallback: p.RefreshCallback,
 		fetcher:         p.Fetcher,
 		persistInterval: p.PersistInterval,
 		persistBackoff:  make(chan bool, 5),
 		persistCallback: p.PersistCallback,
 		close:           make(chan bool),
 	}
-	l.initPersistence()
+	l.LoadFeeds(p.InitialFeeds)
+	l.initPersist()
+	l.initRefresh()
 	return l
 }
 
 // Summary returns a summary of all feeds in the list.
 func (l *List) Summary() []*feed.FeedSummary {
-	defer l.backoffPersist()
+	defer l.delayPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -106,7 +118,7 @@ func (l *List) Summary() []*feed.FeedSummary {
 
 // FeedSummary returns a summary of the feed with the given UID.
 func (l *List) FeedSummary(uid string) *feed.FeedSummary {
-	defer l.backoffPersist()
+	defer l.delayPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -123,7 +135,7 @@ func (l *List) FeedSummary(uid string) *feed.FeedSummary {
 
 // FeedItem returns a summary of the item with the given UID.
 func (l *List) FeedItem(fuid, iuid string) *feed.ItemSummary {
-	defer l.backoffPersist()
+	defer l.delayPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -141,7 +153,7 @@ func (l *List) FeedItem(fuid, iuid string) *feed.ItemSummary {
 // MarkRead marks the feed or item with the given UID as read. It returns true
 // if the feed or item was found and marked as read, false otherwise.
 func (l *List) MarkRead(fuid, iuid string) bool {
-	defer l.backoffPersist()
+	defer l.delayPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -168,30 +180,6 @@ func (l *List) MarkRead(fuid, iuid string) bool {
 	}
 
 	return false
-}
-
-// Refresh fetches all feeds in the list and then refreshes them.
-func (l *List) Refresh() {
-	defer l.backoffPersist()
-	l.muFeeds.Lock()
-	defer l.muFeeds.Unlock()
-
-	wg := sync.WaitGroup{}
-
-	for _, feed := range l.feeds {
-		wg.Add(1)
-		go func() {
-			feed.Refresh(l.fetcher(fetch.FetchParams{
-				URL:        feed.URL,
-				FeedName:   feed.Name,
-				FeedType:   feed.Type,
-				FeedParams: feed.Params,
-			}))
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
 }
 
 // LoadFeeds ensures that the feeds in the list match the given input feeds.

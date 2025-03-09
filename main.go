@@ -17,6 +17,7 @@ const (
 	defaultDBPath          = "db.json"
 	defaultListenAddress   = ":8080"
 	defaultPersistInterval = 1 * time.Minute
+	defaultRefreshInterval = 5 * time.Minute
 )
 
 func dbPath() string {
@@ -62,6 +63,14 @@ func persistInterval() time.Duration {
 	return defaultPersistInterval
 }
 
+func refreshInterval() time.Duration {
+	ri := os.Getenv("REFRESH_INTERVAL")
+	if d, err := time.ParseDuration(ri); err == nil {
+		return d
+	}
+	return defaultRefreshInterval
+}
+
 func feeds() []*list.InputFeed {
 	var feeds []*list.InputFeed
 	if err := json.Unmarshal([]byte(os.Getenv("FEEDS")), &feeds); err != nil {
@@ -72,11 +81,11 @@ func feeds() []*list.InputFeed {
 
 func main() {
 	feedList := mem.NewList(mem.ListParams{
+		InitialFeeds:    feeds(),
 		DBFilePath:      dbPath(),
 		PersistInterval: persistInterval(),
+		RefreshInterval: refreshInterval(),
 	})
-	feedList.LoadFeeds(feeds())
-	feedList.Refresh()
 
 	h := web.NewHandler(&web.HandlerParams{
 		FeedList:    feedList,
