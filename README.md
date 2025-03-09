@@ -21,8 +21,8 @@ If you have a list of feeds in `feeds.json` (see the
 The feed list is a JSON array where each feed is represented as an object:
 ```jsonc
 [
-   { /* xml feed */ }
-   { /* html feed */ }
+   { /* xml feed */ },
+   { /* html feed */ },
    { /* image feed */ }
 ]
 ```
@@ -48,20 +48,22 @@ pages.
   "name": "Example HTML Feed",
   "url": "https://example.com/news",
   "params": {
-    "encoding": "ISO-8859-1", // Only required if not UTF-8.
-    // container_tag and container_attrs are used to define the elements where
-    // anchors will be sourced from.
+    // encoding is only required if not UTF-8.
+    "encoding": "ISO-8859-1",
+    // container_tag (required) and container_attrs (optional) are used to
+    // define the elements where anchors will be sourced from.
     "container_tag": "div",
     "container_attrs": {
       "class": "news-container"
     },
-    "title_pos": 0, // Identifies the position of the title in the extracted
-                    // content.
-    "base_url": "https://example.com/", // The base URL to use for resolving
-    //                                 // relative URLs.
+    // position identifies the position of the title in the extracted content.
+    // Cannot be negative.
+    "title_pos": 0,
+    // base_url is used for resolving relative URLs found in HTML content.
+    "base_url": "https://example.com/",
+    // allowed_prefixes define the only acceptable prefixes for links identified
+    // by the HTML feed parser after resolving them with base_url.
     "allowed_prefixes": [
-      // Only items with URLs starting with these prefixes (after resolving
-      // them with base_url) will be picked up.
       "https://example.com/news/"
     ]
   }
@@ -77,12 +79,13 @@ hosted webcam images or weather report charts).
   "name": "Example Image Feed",
   "url": "https://example.com/image.png",
   "params": {
-    "title": "Example Image", // The title of the items, to which a timestamp
-                              // will be appended.
-    "url": "https://example.com/image.png", // The URL the user should be taken
-                                            // to when opening an item from
-                                            // this feed.
-    "mime_type": "image/png" // The type of image returned by the feed URL.
+    // title is the titel of the resulting feed items, to which a timestamp
+    // will be appended.
+    "title": "Example Image",
+    // url will be used for representing the URL of the resulting feed items.
+    "url": "https://example.com/image.png",
+    // mime_type defines the type of image returned by the feed URL.
+    "mime_type": "image/png"
   }
 }
 ```
@@ -332,10 +335,10 @@ All error responses follow this format:
 2. Make sure to set the following environment variables in the deployment:
    | Environment variable                  | Value
    | -                                     | -
-   | `ACCESS_TOKEN`                        | A random secret value.
+   | `ACCESS_TOKEN`                        | A random secret value
    | `SESSION_KEY`                         | Another random secret value
    | `DB_PATH`                             | `/home/db.json`
-   | `FEEDS`                               | The JSON content of your feedlist.
+   | `FEEDS`                               | The JSON feed list
    | `PORT`                                | `80`
    | `PERSIST_INTERVAL`                    | `15m`
    | `REFRESH_INTERVAL`                    | `20m`
