@@ -12,3 +12,4 @@ test:
 
 version:
 	git rev-parse HEAD > ./internal/web/static/version
+	echo "Version set to: $$(cat ./internal/web/static/version)"
