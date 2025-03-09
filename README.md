@@ -16,7 +16,7 @@ be self-hosted and used by a single user.
    | `SESSION_KEY`                         | Another random secret value
    | `DB_PATH`                             | `/home/db.json`
    | `FEEDS`                               | The JSON content of your feedlist.
-   | `LISTEN_ADDRESS`                      | `:80`
+   | `PORT`                                | `80`
    | `PERSIST_INTERVAL`                    | `15m`
    | `REFRESH_INTERVAL`                    | `20m`
    | `WEBSITES_ENABLE_APP_SERVICE_STORAGE` | `true`

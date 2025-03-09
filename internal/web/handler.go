@@ -3,6 +3,7 @@ package web
 import (
 	"embed"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -105,6 +106,16 @@ func NewHandler(p *HandlerParams) *handler {
 	return h
 }
 
+func (s *handler) jsonResponse(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(v)
+	if err != nil {
+		slog.Error("cannot encode response", slog.String("err", err.Error()))
+		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
+		return
+	}
+}
+
 func (s *handler) login(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	var data struct {
@@ -126,11 +137,7 @@ func (s *handler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *handler) feedList(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode(s.p.FeedList.Summary())
-	if err != nil {
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
-		return
-	}
+	s.jsonResponse(w, s.p.FeedList.Summary())
 }
 
 func (s *handler) feed(w http.ResponseWriter, r *http.Request) {
@@ -141,11 +148,7 @@ func (s *handler) feed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := json.NewEncoder(w).Encode(feed)
-	if err != nil {
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
-		return
-	}
+	s.jsonResponse(w, feed)
 }
 
 func (s *handler) item(w http.ResponseWriter, r *http.Request) {
@@ -157,11 +160,7 @@ func (s *handler) item(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := json.NewEncoder(w).Encode(item)
-	if err != nil {
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode response")
-		return
-	}
+	s.jsonResponse(w, item)
 }
 
 func (s *handler) read(w http.ResponseWriter, r *http.Request) {
@@ -187,11 +186,8 @@ func (s *handler) status(w http.ResponseWriter, r *http.Request) {
 	}
 	version := strings.TrimSpace(string(bVersion))
 
-	err = json.NewEncoder(w).Encode(statusResponse{
+	s.jsonResponse(w, statusResponse{
 		Status:  "ok",
 		Version: version,
 	})
-	if err != nil {
-		s.writeErrorResponse(w, http.StatusInternalServerError, "cannot encode status response")
-	}
 }

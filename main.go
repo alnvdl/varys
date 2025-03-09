@@ -152,6 +152,10 @@ func main() {
 
 	slog.Info("starting server", slog.String("address", srv.Addr))
 	if err := srv.ListenAndServe(); err != nil {
-		panic(err)
+		if err == http.ErrServerClosed {
+			slog.Info("server shut down")
+		} else {
+			slog.Error("unexpected error on listen and serve", slog.String("error", err.Error()))
+		}
 	}
 }
