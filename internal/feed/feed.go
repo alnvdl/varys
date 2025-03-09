@@ -111,14 +111,19 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 
-// SortedItems returns the items in the feed sorted by timestamp and position
-// in descending order.
+// SortedItems returns the items in the feed sorted by timestamp, position and
+// then URL in descending order.
 func (f *Feed) SortedItems() []Item {
 	var sortedItems []Item
 	for _, item := range f.Items {
 		sortedItems = append(sortedItems, *item)
 	}
 	sort.Slice(sortedItems, func(i, j int) bool {
+		if sortedItems[i].Timestamp == sortedItems[j].Timestamp &&
+			sortedItems[i].Position == sortedItems[j].Position {
+			return sortedItems[i].URL < sortedItems[j].URL
+		}
+
 		if sortedItems[i].Timestamp == sortedItems[j].Timestamp {
 			return sortedItems[i].Position < sortedItems[j].Position
 		}
