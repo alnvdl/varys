@@ -1,75 +1,97 @@
 // Package list provides implementations of feed lists that use their own
 // fetching and persistence mechanisms.
-package list
+package mem
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"iter"
 	"log/slog"
 	"maps"
-	"os"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/alnvdl/varys/internal/feed"
 	"github.com/alnvdl/varys/internal/fetch"
+	"github.com/alnvdl/varys/internal/list"
 	"github.com/alnvdl/varys/internal/timeutil"
 )
 
-// Simple is a feed list that is kept in memory and backed by a serialized JSON
-// file. It uses the "fetch" package for fetching feeds and supports a virtual
-// "all" feed.
-type Simple struct {
-	feeds           map[string]*feed.Feed
-	muFeeds         sync.Mutex
-	dbFilePath      string
+// List is a feed list that is kept in memory and optionally backed by a
+// serialized JSON file. It uses the "fetch" package for fetching feeds and
+// supports a virtual "all" feed.
+type List struct {
+	feeds   map[string]*feed.Feed
+	muFeeds sync.Mutex
+
 	refreshInterval time.Duration
 	fetcher         func(p fetch.FetchParams) ([]feed.RawItem, error)
+
+	dbFilePath      string
+	persistInterval time.Duration
+	persistBackoff  chan bool
+	persistCallback func(err error)
+
+	wg    sync.WaitGroup
+	close chan bool
 }
 
-type serializedSimpleStore struct {
+type serializedList struct {
 	Feeds map[string]*feed.Feed `json:"feeds"`
 }
 
-// SimpleParams is the configuration for creating a new Simple feed list.
-type SimpleParams struct {
-	// DBFilePath is the path to the file where the feed list is serialized to
-	// and deserialized from. If empty, the feed list will not be persisted.
+// ListParams is the configuration for creating a new MemList.
+type ListParams struct {
+	// DBFilePath is the path to the file in FS where the feed list is
+	// serialized to and deserialized from. If empty, the feed list will not be
+	// persisted and will be kept only in memory.
 	DBFilePath string
+
+	// PersistInterval is the interval at which the feed list is persisted to
+	// the file. If 0, auto-persistence will be disabled.
+	PersistInterval time.Duration
 
 	// RefreshInterval is the interval at which feeds are refreshed. If 0,
 	// auto-refresh will be disabled.
 	RefreshInterval time.Duration
 
-	// Fetcher is the function used to fetch feeds. If nil, the default fetcher
+	// Fetcher is the function used to fetch feeds. If nil, a default fetcher
 	// will be used.
 	Fetcher func(p fetch.FetchParams) ([]feed.RawItem, error)
+
+	// PersistCallback is an optional function to be called after each
+	// persistence operation is attempted (successfully or not depending as
+	// given by err).
+	PersistCallback func(err error)
 }
 
-// NewSimple creates a new Simple feed list based on the given p parameters.
-func NewSimple(p SimpleParams) *Simple {
+// NewList creates a new in-memory feed list based on the given p parameters.
+func NewList(p ListParams) *List {
 	if p.Fetcher == nil {
 		p.Fetcher = fetch.Fetch
 	}
-	return &Simple{
+	l := &List{
 		feeds:           make(map[string]*feed.Feed),
 		dbFilePath:      p.DBFilePath,
 		refreshInterval: p.RefreshInterval,
 		fetcher:         p.Fetcher,
+		persistInterval: p.PersistInterval,
+		persistBackoff:  make(chan bool, 5),
+		persistCallback: p.PersistCallback,
+		close:           make(chan bool),
 	}
+	l.initPersistence()
+	return l
 }
 
 // Summary returns a summary of all feeds in the list.
-func (l *Simple) Summary() []*feed.FeedSummary {
+func (l *List) Summary() []*feed.FeedSummary {
+	defer l.backoffPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
 	i := 1
 	summaries := make([]*feed.FeedSummary, len(l.feeds)+1)
-	summaries[0] = simpleStoreAllFeed(maps.Values(l.feeds), false)
+	summaries[0] = allFeed(maps.Values(l.feeds), false)
 	for _, feed := range l.feeds {
 		summaries[i] = feed.Summary(false, nil)
 		i++
@@ -83,12 +105,13 @@ func (l *Simple) Summary() []*feed.FeedSummary {
 }
 
 // FeedSummary returns a summary of the feed with the given UID.
-func (l *Simple) FeedSummary(uid string) *feed.FeedSummary {
+func (l *List) FeedSummary(uid string) *feed.FeedSummary {
+	defer l.backoffPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
 	if uid == "all" {
-		return simpleStoreAllFeed(maps.Values(l.feeds), true)
+		return allFeed(maps.Values(l.feeds), true)
 	}
 
 	if feed, ok := l.feeds[uid]; ok {
@@ -99,7 +122,8 @@ func (l *Simple) FeedSummary(uid string) *feed.FeedSummary {
 }
 
 // FeedItem returns a summary of the item with the given UID.
-func (l *Simple) FeedItem(fuid, iuid string) *feed.ItemSummary {
+func (l *List) FeedItem(fuid, iuid string) *feed.ItemSummary {
+	defer l.backoffPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -116,7 +140,8 @@ func (l *Simple) FeedItem(fuid, iuid string) *feed.ItemSummary {
 
 // MarkRead marks the feed or item with the given UID as read. It returns true
 // if the feed or item was found and marked as read, false otherwise.
-func (l *Simple) MarkRead(fuid, iuid string) bool {
+func (l *List) MarkRead(fuid, iuid string) bool {
+	defer l.backoffPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -146,7 +171,8 @@ func (l *Simple) MarkRead(fuid, iuid string) bool {
 }
 
 // Refresh fetches all feeds in the list and then refreshes them.
-func (l *Simple) Refresh() {
+func (l *List) Refresh() {
+	defer l.backoffPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -168,42 +194,11 @@ func (l *Simple) Refresh() {
 	wg.Wait()
 }
 
-func (l *Simple) Save(w io.Writer) error {
-	l.muFeeds.Lock()
-	defer l.muFeeds.Unlock()
-
-	enc := json.NewEncoder(w)
-	if os.Getenv("DEBUG") != "" {
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "  ")
-	}
-	err := enc.Encode(serializedSimpleStore{Feeds: l.feeds})
-	if err != nil {
-		return fmt.Errorf("cannot serialize feed list: %v", err)
-	}
-	return nil
-}
-
-func (l *Simple) Load(r io.Reader) error {
-	l.muFeeds.Lock()
-	defer l.muFeeds.Unlock()
-
-	dec := json.NewDecoder(r)
-	data := serializedSimpleStore{}
-	err := dec.Decode(&data)
-	if err != nil {
-		return fmt.Errorf("cannot deserialize feed list: %v", err)
-	}
-	l.feeds = data.Feeds
-
-	return nil
-}
-
 // LoadFeeds ensures that the feeds in the list match the given input feeds.
 // It keeps existing feeds that are in the input, adds new feeds that are
 // missing and discards feeds that are not in the input. So leaving inputFeeds
 // empty or nil will remove all feeds.
-func (l *Simple) LoadFeeds(inputFeeds []*InputFeed) {
+func (l *List) LoadFeeds(inputFeeds []*list.InputFeed) {
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
 
@@ -235,10 +230,10 @@ func (l *Simple) LoadFeeds(inputFeeds []*InputFeed) {
 	l.feeds = newFeeds
 }
 
-// simpleStoreAllFeed returns the feed summary for the virtual feed containing
-// all items from the given feeds. If withItems is true, it includes the items
-// in the feed.
-func simpleStoreAllFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSummary {
+// allFeed returns the feed summary for the virtual feed containing all
+// items from the given feeds. If withItems is true, it includes the items in
+// the feed.
+func allFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSummary {
 	allFeed := &feed.Feed{
 		Name:            "All",
 		LastRefreshedAt: timeutil.Now(),

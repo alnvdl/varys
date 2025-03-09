@@ -3,18 +3,20 @@ package main
 import (
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/alnvdl/varys/internal/list"
+	"github.com/alnvdl/varys/internal/list/mem"
 	"github.com/alnvdl/varys/internal/web"
 )
 
 const (
-	defaultDBPath        = "db.json"
-	defaultListenAddress = ":8080"
+	defaultDBPath          = "db.json"
+	defaultListenAddress   = ":8080"
+	defaultPersistInterval = 1 * time.Minute
 )
 
 func dbPath() string {
@@ -52,6 +54,14 @@ func accessToken() string {
 	return accessToken
 }
 
+func persistInterval() time.Duration {
+	pi := os.Getenv("PERSIST_INTERVAL")
+	if d, err := time.ParseDuration(pi); err == nil {
+		return d
+	}
+	return defaultPersistInterval
+}
+
 func feeds() []*list.InputFeed {
 	var feeds []*list.InputFeed
 	if err := json.Unmarshal([]byte(os.Getenv("FEEDS")), &feeds); err != nil {
@@ -61,25 +71,12 @@ func feeds() []*list.InputFeed {
 }
 
 func main() {
-	inputFile, err := os.OpenFile(dbPath(), os.O_RDONLY|os.O_CREATE, 0600)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot open DB file: %v\n", err)
-		os.Exit(1)
-	}
-	defer inputFile.Close()
-
-	feedList := list.NewSimple(list.SimpleParams{})
-	feedList.Load(inputFile)
+	feedList := mem.NewList(mem.ListParams{
+		DBFilePath:      dbPath(),
+		PersistInterval: persistInterval(),
+	})
 	feedList.LoadFeeds(feeds())
 	feedList.Refresh()
-
-	outputFile, err := os.OpenFile(dbPath(), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot open DB file: %v\n", err)
-		os.Exit(1)
-	}
-
-	feedList.Save(outputFile)
 
 	h := web.NewHandler(&web.HandlerParams{
 		FeedList:    feedList,

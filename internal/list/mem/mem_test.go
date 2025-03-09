@@ -1,8 +1,6 @@
-package list_test
+package mem_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -11,6 +9,7 @@ import (
 	"github.com/alnvdl/varys/internal/feed"
 	"github.com/alnvdl/varys/internal/fetch"
 	"github.com/alnvdl/varys/internal/list"
+	"github.com/alnvdl/varys/internal/list/mem"
 	"github.com/alnvdl/varys/internal/timeutil"
 )
 
@@ -64,149 +63,38 @@ func compareFeedSummary(t *testing.T, got, want *feed.FeedSummary) {
 		t.Errorf("expected %d items, got %d", len(want.Items), len(got.Items))
 	}
 	for i, item := range got.Items {
-		if item.Title != want.Items[i].Title {
-			t.Errorf("expected item title %s, got %s", want.Items[i].Title, item.Title)
+		if item.UID != want.Items[i].UID {
+			t.Errorf("expected item UID %s, got %s", want.Items[i].UID, item.UID)
+		}
+		if item.FeedUID != want.Items[i].FeedUID {
+			t.Errorf("expected item feed UID %s, got %s", want.Items[i].FeedUID, item.FeedUID)
+		}
+		if item.FeedName != want.Items[i].FeedName {
+			t.Errorf("expected item feed name %s, got %s", want.Items[i].FeedName, item.FeedName)
 		}
 		if item.URL != want.Items[i].URL {
 			t.Errorf("expected item URL %s, got %s", want.Items[i].URL, item.URL)
 		}
-	}
-}
-
-func TestFeedListSave(t *testing.T) {
-	feeds := map[string]*feed.Feed{
-		"feed1": {
-			Name: "Feed 1",
-			Type: "xml",
-			URL:  "http://example.com/feed1",
-			Items: map[string]*feed.Item{
-				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
-			},
-		},
-		"feed2": {
-			Name: "Feed 2",
-			Type: "xml",
-			URL:  "http://example.com/feed2",
-			Items: map[string]*feed.Item{
-				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
-			},
-		},
-	}
-
-	// Save the l to a buffer in JSON.
-	l := list.NewSimple(list.SimpleParams{})
-	list.SetFeeds(l, feeds)
-	var buf bytes.Buffer
-	err := l.Save(&buf)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// Load the list from the buffer.
-	var data list.SerializedList
-	err = json.Unmarshal(buf.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	if len(data.Feeds) != len(feeds) {
-		t.Fatalf("expected %d feeds, got %d", len(feeds), len(data.Feeds))
-	}
-	for key, f := range feeds {
-		savedFeed, ok := data.Feeds[key]
-		if !ok {
-			t.Fatalf("expected feed %s to be present", key)
+		if item.Title != want.Items[i].Title {
+			t.Errorf("expected item title %s, got %s", want.Items[i].Title, item.Title)
 		}
-		checkFeed(t, *savedFeed, *f)
-	}
-}
-
-type errorWriter struct{}
-
-func (ew *errorWriter) Write(p []byte) (n int, err error) {
-	return 0, errors.New("simulated write error")
-}
-
-func TestListSaveError(t *testing.T) {
-	l := list.NewSimple(list.SimpleParams{})
-	list.SetFeeds(l, make(map[string]*feed.Feed))
-
-	err := l.Save(&errorWriter{})
-	if err == nil {
-		t.Fatalf("expected an error, got nil")
-	}
-
-	expectedErr := "cannot serialize feed list: simulated write error"
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %v, got %v", expectedErr, err.Error())
-	}
-}
-
-func TestFeedListLoad(t *testing.T) {
-	feeds := map[string]*feed.Feed{
-		"feed1": {
-			Name: "Feed 1",
-			Type: "xml",
-			URL:  "http://example.com/feed1",
-			Items: map[string]*feed.Item{
-				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
-			},
-		},
-		"feed2": {
-			Name: "Feed 2",
-			Type: "xml",
-			URL:  "http://example.com/feed2",
-			Items: map[string]*feed.Item{
-				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
-			},
-		},
-	}
-
-	// Serialize the feeds to JSON.
-	var buf bytes.Buffer
-	var data list.SerializedList
-	data.Feeds = feeds
-	err := json.NewEncoder(&buf).Encode(&data)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// Load the feeds from the JSON.
-	loadedList := list.NewSimple(list.SimpleParams{})
-	err = loadedList.Load(&buf)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	loadedFeeds := list.Feeds(loadedList)
-	if len(loadedFeeds) != len(feeds) {
-		t.Fatalf("expected %d feeds, got %d", len(feeds), len(loadedFeeds))
-	}
-
-	for key, f := range feeds {
-		loadedFeed, ok := loadedFeeds[key]
-		if !ok {
-			t.Fatalf("expected feed %s to be present", key)
+		if item.Timestamp != want.Items[i].Timestamp {
+			t.Errorf("expected item timestamp %d, got %d", want.Items[i].Timestamp, item.Timestamp)
 		}
-		checkFeed(t, *loadedFeed, *f)
-	}
-}
-
-func TestFeedListLoadError(t *testing.T) {
-	corruptedJSON := `{"feeds": {"feed1":`
-
-	list := list.NewSimple(list.SimpleParams{})
-	err := list.Load(bytes.NewBufferString(corruptedJSON))
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-
-	expectedErr := "cannot deserialize feed list: unexpected EOF"
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %v, got %v", expectedErr, err.Error())
+		if item.Authors != want.Items[i].Authors {
+			t.Errorf("expected item authors %s, got %s", want.Items[i].Authors, item.Authors)
+		}
+		if item.Read != want.Items[i].Read {
+			t.Errorf("expected item read %t, got %t", want.Items[i].Read, item.Read)
+		}
+		if item.Content != want.Items[i].Content {
+			t.Errorf("expected item content %s, got %s", want.Items[i].Content, item.Content)
+		}
 	}
 }
 
 func TestListSummary(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		desc  string
 		feeds map[string]*feed.Feed
@@ -267,8 +155,8 @@ func TestListSummary(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{})
-			list.SetFeeds(l, test.feeds)
+			l := mem.NewList(mem.ListParams{})
+			mem.SetFeeds(l, test.feeds)
 			got := l.Summary()
 			if len(got) != len(test.want) {
 				t.Fatalf("expected %d summaries, got %d", len(test.want), len(got))
@@ -281,6 +169,7 @@ func TestListSummary(t *testing.T) {
 }
 
 func TestListFeedSummary(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		desc  string
 		feeds map[string]*feed.Feed
@@ -309,9 +198,15 @@ func TestListFeedSummary(t *testing.T) {
 			Name:      "Feed 1",
 			URL:       "http://example.com/feed1",
 			ItemCount: 1,
-			Items: []*feed.ItemSummary{
-				{UID: "item1", FeedUID: "feed1", FeedName: "Feed 1", URL: "http://example.com/item1", Title: "Item 1"},
-			},
+			Items: []*feed.ItemSummary{{
+				UID:       "4683f48c8cba24662d0442547a138a6ccd51a419fbf1810598f28be6385b6cc8",
+				FeedUID:   "6ab3d6443b458a4a036ac06fbe6f5b9bc687c69e38ebca0f95a57e47c72a6c50",
+				FeedName:  "Feed 1",
+				URL:       "http://example.com/item1",
+				Title:     "Item 1",
+				Timestamp: 0,
+				Read:      false,
+			}},
 		},
 	}, {
 		desc: "feed is the all feed compiled from two other existing feeds",
@@ -321,7 +216,10 @@ func TestListFeedSummary(t *testing.T) {
 				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
-					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
+					"item1": {
+						RawItem:   feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"},
+						Timestamp: 2,
+					},
 				},
 			},
 			"feed2": {
@@ -329,7 +227,10 @@ func TestListFeedSummary(t *testing.T) {
 				Type: "xml",
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
-					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
+					"item2": {
+						RawItem:   feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"},
+						Timestamp: 1,
+					},
 				},
 			},
 		},
@@ -338,17 +239,29 @@ func TestListFeedSummary(t *testing.T) {
 			UID:       "all",
 			Name:      "All",
 			ItemCount: 2,
-			Items: []*feed.ItemSummary{
-				{UID: "item1", FeedUID: "feed1", FeedName: "Feed 1", URL: "http://example.com/item1", Title: "Item 1"},
-				{UID: "item2", FeedUID: "feed2", FeedName: "Feed 2", URL: "http://example.com/item2", Title: "Item 2"},
+			Items: []*feed.ItemSummary{{
+				UID:       "4683f48c8cba24662d0442547a138a6ccd51a419fbf1810598f28be6385b6cc8",
+				FeedUID:   "6ab3d6443b458a4a036ac06fbe6f5b9bc687c69e38ebca0f95a57e47c72a6c50",
+				FeedName:  "Feed 1",
+				URL:       "http://example.com/item1",
+				Title:     "Item 1",
+				Timestamp: 2,
+			}, {
+				UID:       "cd4519e09135ae2b53e975db2e286158cba014d50c9cb14ffded6cf9f5ae94ec",
+				FeedUID:   "978bd385ffb3be1c42308b4c0e9755c747211367cf3338e3e864cd79f82e3222",
+				FeedName:  "Feed 2",
+				URL:       "http://example.com/item2",
+				Title:     "Item 2",
+				Timestamp: 1,
+			},
 			},
 		},
 	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{})
-			list.SetFeeds(l, test.feeds)
+			l := mem.NewList(mem.ListParams{})
+			mem.SetFeeds(l, test.feeds)
 			got := l.FeedSummary(test.uid)
 			if got == nil && test.want != nil {
 				t.Fatalf("expected summary, got nil")
@@ -364,6 +277,7 @@ func TestListFeedSummary(t *testing.T) {
 }
 
 func TestListFeedItem(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		desc  string
 		feeds map[string]*feed.Feed
@@ -428,8 +342,8 @@ func TestListFeedItem(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{})
-			list.SetFeeds(l, test.feeds)
+			l := mem.NewList(mem.ListParams{})
+			mem.SetFeeds(l, test.feeds)
 			got := l.FeedItem(test.fuid, test.iuid)
 			if got == nil && test.want != nil {
 				t.Fatalf("expected item summary, got nil")
@@ -454,6 +368,7 @@ func TestListFeedItem(t *testing.T) {
 }
 
 func TestAllFeed(t *testing.T) {
+	t.Parallel()
 	now := timeutil.Now()
 
 	tests := []struct {
@@ -643,7 +558,7 @@ func TestAllFeed(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			summary := list.SimpleAllFeed(maps.Values(test.feeds), test.withItems)
+			summary := mem.AllFeed(maps.Values(test.feeds), test.withItems)
 			if summary.UID != test.expectedSummary.UID ||
 				summary.Name != test.expectedSummary.Name ||
 				summary.ItemCount != test.expectedSummary.ItemCount ||
@@ -666,7 +581,8 @@ func TestAllFeed(t *testing.T) {
 	}
 }
 
-func TestSimpleMarkRead(t *testing.T) {
+func TestListMarkRead(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc           string
 		feeds          map[string]*feed.Feed
@@ -732,9 +648,9 @@ func TestSimpleMarkRead(t *testing.T) {
 				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
-					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false},
-					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: false},
-					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: false},
+					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false, Timestamp: 3},
+					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: false, Timestamp: 2},
+					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: false, Timestamp: 1},
 				},
 			},
 		},
@@ -747,9 +663,9 @@ func TestSimpleMarkRead(t *testing.T) {
 				Type: "xml",
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
-					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true},
-					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: true},
-					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: true},
+					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true, Timestamp: 3},
+					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: true, Timestamp: 2},
+					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: true, Timestamp: 1},
 				},
 			},
 		},
@@ -823,14 +739,14 @@ func TestSimpleMarkRead(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{})
-			list.SetFeeds(l, test.feeds)
+			l := mem.NewList(mem.ListParams{})
+			mem.SetFeeds(l, test.feeds)
 			result := l.MarkRead(test.fuid, test.iuid)
 			if result != test.expectedResult {
 				t.Errorf("expected result %v, got %v", test.expectedResult, result)
 			}
 			for key, expectedFeed := range test.expectedFeeds {
-				actualFeed, ok := list.Feeds(l)[key]
+				actualFeed, ok := mem.Feeds(l)[key]
 				if !ok {
 					t.Fatalf("expected feed %s to be present", key)
 				}
@@ -840,7 +756,8 @@ func TestSimpleMarkRead(t *testing.T) {
 	}
 }
 
-func TestSimpleRefresh(t *testing.T) {
+func TestListRefresh(t *testing.T) {
+	t.Parallel()
 	now := timeutil.Now()
 
 	mockFetcher := func(p fetch.FetchParams) ([]feed.RawItem, error) {
@@ -952,13 +869,13 @@ func TestSimpleRefresh(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{
+			l := mem.NewList(mem.ListParams{
 				Fetcher: mockFetcher,
 			})
-			list.SetFeeds(l, test.initialFeeds)
+			mem.SetFeeds(l, test.initialFeeds)
 			l.Refresh()
 			for key, expectedFeed := range test.expectedFeeds {
-				actualFeed, ok := list.Feeds(l)[key]
+				actualFeed, ok := mem.Feeds(l)[key]
 				if !ok {
 					t.Fatalf("expected feed %s to be present", key)
 				}
@@ -968,7 +885,8 @@ func TestSimpleRefresh(t *testing.T) {
 	}
 }
 
-func TestSimpleLoadFeeds(t *testing.T) {
+func TestListLoadFeeds(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc          string
 		initialFeeds  map[string]*feed.Feed
@@ -1016,10 +934,10 @@ func TestSimpleLoadFeeds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := list.NewSimple(list.SimpleParams{})
-			list.SetFeeds(l, test.initialFeeds)
+			l := mem.NewList(mem.ListParams{})
+			mem.SetFeeds(l, test.initialFeeds)
 			l.LoadFeeds(test.inputFeeds)
-			actualFeeds := list.Feeds(l)
+			actualFeeds := mem.Feeds(l)
 			if len(actualFeeds) != len(test.expectedFeeds) {
 				t.Fatalf("expected %d feeds, got %d", len(test.expectedFeeds), len(actualFeeds))
 			}
