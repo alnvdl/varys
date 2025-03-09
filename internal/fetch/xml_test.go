@@ -302,10 +302,10 @@ func TestParseXML(t *testing.T) {
 				<channel>
 					<link>http://example.com</link>
 					<item>
-						<title><![CDATA[<div>should not be in output</div><script>should be removed</script>Item 1]]></title>
-						<link><div>should not be in output</div><script>should be removed</script>http://example.com/item1</link>
+						<title><![CDATA[<script>actually ok</script>Item 1]]></title>
+						<link>http://example.com/item1<script>actually ignored</script></link>
 						<dc:creator>
-							<![CDATA[<div>should not be in output</div><script>should be removed</script>Author 1]]>
+							<![CDATA[<script>actually ok</script>Author 1]]>
 						</dc:creator>
 						<content:encoded><![CDATA[<div>should be in output</div><script>should be removed</script><b>Content 1</b>]]></content:encoded>
 					</item>
@@ -313,8 +313,8 @@ func TestParseXML(t *testing.T) {
 			</rss>`,
 		expected: []feed.RawItem{{
 			URL:      "http://example.com/item1",
-			Title:    "Item 1",
-			Authors:  "Author 1",
+			Title:    "<script>actually ok</script>Item 1",
+			Authors:  "<script>actually ok</script>Author 1",
 			Content:  "<div>should be in output</div><b>Content 1</b>",
 			Position: 0,
 		}},
@@ -324,10 +324,10 @@ func TestParseXML(t *testing.T) {
 			<feed>
 				<link href="http://example.com"/>
 				<entry>
-					<title><div>should not be in output</div><script>should be removed</script>Item 1</title>
+					<title>Item 1<script>actually ignored</script></title>
 					<link href="/what&lt;div&gt;should just be text&lt;/div&gt;something"/>
 					<author>
-						<name><div>should not be in output</div><script>should be removed</script>Author 1</name>
+						<name><![CDATA[<script>actually ok</script>Author 1]]></name>
 					</author>
 					<content><![CDATA[<div>should be in output</div><script>should be removed</script><b>Content 1</b>]]></content>
 				</entry>
@@ -335,7 +335,7 @@ func TestParseXML(t *testing.T) {
 		expected: []feed.RawItem{{
 			URL:      "http://example.com/what%3Cdiv%3Eshould%20just%20be%20text%3C/div%3Esomething",
 			Title:    "Item 1",
-			Authors:  "Author 1",
+			Authors:  "<script>actually ok</script>Author 1",
 			Content:  "<div>should be in output</div><b>Content 1</b>",
 			Position: 0,
 		}},

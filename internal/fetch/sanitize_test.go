@@ -14,11 +14,10 @@ func TestSanitizeHTML(t *testing.T) {
 		input:    `just some text`,
 		expected: `just some text`,
 	}, {
-		input: `<div>
-			&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;
-			<script>alert('xss1')</script><p>Paragraph</p>
-		</div>`,
-		expected: `<div><p>Paragraph</p></div>`,
+		input: `<div>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;
+			<script>alert('xss1')</script><p>Paragraph</p></div>`,
+		expected: `<div>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;
+			<p>Paragraph</p></div>`,
 	}, {
 		input:    `<div><script>alert('xss1')</script><p>Paragraph</p></div>`,
 		expected: `<div><p>Paragraph</p></div>`,
