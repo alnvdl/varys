@@ -17,6 +17,8 @@ To run Varys locally, just install Go 1.24+ and run `make dev_example`.
 If you have a list of feeds in `feeds.json` (see the
 [Feed list format](#feed-list-format) below), you can run `make dev` to use it.
 
+To access the web interface, go to http://localhost:8080/#token:dev.
+
 ## Feed list format
 The feed list is a JSON array where each feed is represented as an object:
 ```jsonc
@@ -315,6 +317,22 @@ Returns the status and version of the application.
       "message": "cannot read version file"
    }
    ```
+
+### Authentication
+
+The login happens is triggered via JavaScript: the page will detect the
+`#token:...` hash in the URL and call the `POST /login` endpoint with the
+token. That leads to a session token being set if the token is correct.
+
+Please note that this design means that the browser may keep the token in the
+history. The typical pattern is to actually bookmark the reader with the token.
+
+This is considered a reasonable security trade-off for this project for the
+following reasons:
+- Varys is design to be self-hosted and used by a single user;
+- The only write operation is marking items as read.
+- While the list of feeds might be sensitive information, all of the
+  information contained in them is usually public on the internet.
 
 ### Error Format
 All error responses follow this format:
