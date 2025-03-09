@@ -586,6 +586,7 @@ func TestListMarkRead(t *testing.T) {
 		feeds          map[string]*feed.Feed
 		fuid           string
 		iuid           string
+		before         int64
 		expectedResult bool
 		expectedFeeds  map[string]*feed.Feed
 	}{{
@@ -602,6 +603,7 @@ func TestListMarkRead(t *testing.T) {
 		},
 		fuid:           "nonexistent",
 		iuid:           "item1",
+		before:         timeutil.Now(),
 		expectedResult: false,
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
@@ -627,6 +629,7 @@ func TestListMarkRead(t *testing.T) {
 		},
 		fuid:           "feed1",
 		iuid:           "nonexistent",
+		before:         timeutil.Now(),
 		expectedResult: false,
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
@@ -654,6 +657,7 @@ func TestListMarkRead(t *testing.T) {
 		},
 		fuid:           "feed1",
 		iuid:           "",
+		before:         4,
 		expectedResult: true,
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
@@ -662,6 +666,36 @@ func TestListMarkRead(t *testing.T) {
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true, Timestamp: 3},
+					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: true, Timestamp: 2},
+					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: true, Timestamp: 1},
+				},
+			},
+		},
+	}, {
+		desc: "feed exists and item is empty, some items marked as read",
+		feeds: map[string]*feed.Feed{
+			"feed1": {
+				Name: "Feed 1",
+				Type: "xml",
+				URL:  "http://example.com/feed1",
+				Items: map[string]*feed.Item{
+					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false, Timestamp: 3},
+					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: false, Timestamp: 2},
+					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: false, Timestamp: 1},
+				},
+			},
+		},
+		fuid:           "feed1",
+		iuid:           "",
+		before:         2,
+		expectedResult: true,
+		expectedFeeds: map[string]*feed.Feed{
+			"feed1": {
+				Name: "Feed 1",
+				Type: "xml",
+				URL:  "http://example.com/feed1",
+				Items: map[string]*feed.Item{
+					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: false, Timestamp: 3},
 					"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}, Read: true, Timestamp: 2},
 					"item3": {RawItem: feed.RawItem{URL: "http://example.com/item3", Title: "Item 3"}, Read: true, Timestamp: 1},
 				},
@@ -681,6 +715,7 @@ func TestListMarkRead(t *testing.T) {
 		},
 		fuid:           "feed1",
 		iuid:           "item1",
+		before:         timeutil.Now(),
 		expectedResult: true,
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
@@ -714,6 +749,7 @@ func TestListMarkRead(t *testing.T) {
 		},
 		fuid:           "all",
 		iuid:           "",
+		before:         timeutil.Now(),
 		expectedResult: true,
 		expectedFeeds: map[string]*feed.Feed{
 			"feed1": {
@@ -739,7 +775,7 @@ func TestListMarkRead(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
 			mem.SetFeeds(l, test.feeds)
-			result := l.MarkRead(test.fuid, test.iuid)
+			result := l.MarkRead(test.fuid, test.iuid, test.before)
 			if result != test.expectedResult {
 				t.Errorf("expected result %v, got %v", test.expectedResult, result)
 			}

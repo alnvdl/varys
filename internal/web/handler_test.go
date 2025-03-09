@@ -3,12 +3,14 @@ package web_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/alnvdl/varys/internal/feed"
+	"github.com/alnvdl/varys/internal/timeutil"
 	"github.com/alnvdl/varys/internal/web"
 )
 
@@ -42,9 +44,19 @@ func (m *mockFeedLister) FeedItem(fuid, iuid string) *feed.ItemSummary {
 	return nil
 }
 
-func (m *mockFeedLister) MarkRead(fuid, iuid string) bool {
+func (m *mockFeedLister) MarkRead(fuid, iuid string, before int64) bool {
 	for _, f := range m.feeds {
 		if f.UID == fuid {
+			// Marking a feed as read.
+			if iuid == "" {
+				for _, item := range f.Items {
+					if item.Timestamp <= before {
+						item.Read = true
+					}
+				}
+				return true
+			}
+			// Marking an item as read.
 			for _, item := range f.Items {
 				if item.UID == iuid {
 					item.Read = true
@@ -113,7 +125,7 @@ func compareItems(t *testing.T, expected, actual []*feed.ItemSummary) {
 			item.FeedUID != expected[i].FeedUID || item.FeedName != expected[i].FeedName ||
 			item.Timestamp != expected[i].Timestamp || item.Authors != expected[i].Authors ||
 			item.Read != expected[i].Read || item.Content != expected[i].Content {
-			t.Errorf("expected item %v, got %v", expected[i], item)
+			t.Errorf("expected item %#v, got %#v", expected[i], item)
 		}
 	}
 }
@@ -430,37 +442,57 @@ func TestMarkAsRead(t *testing.T) {
 		feeds          []*feed.FeedSummary
 		fuid           string
 		iuid           string
+		before         int64
 		token          string
 		expectedStatus int
 		authSuccess    bool
-		itemRead       bool
+		expectedItems  []*feed.ItemSummary
 	}{{
 		desc:           "success: item marked as read",
 		token:          "valid-token",
 		authSuccess:    true,
 		fuid:           "1",
 		iuid:           "1",
-		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1"}}}},
+		before:         timeutil.Now(),
+		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}}}},
 		expectedStatus: http.StatusOK,
-		itemRead:       true,
+		expectedItems:  []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: true}},
 	}, {
 		desc:           "failure: item not found",
 		token:          "valid-token",
 		authSuccess:    true,
 		fuid:           "1",
 		iuid:           "2",
-		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1"}}}},
+		before:         timeutil.Now(),
+		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}}}},
 		expectedStatus: http.StatusNotFound,
-		itemRead:       false,
+		expectedItems:  []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: false}},
 	}, {
 		desc:           "failure: authentication with invalid cookie",
 		token:          "invalid-token",
 		authSuccess:    false,
 		fuid:           "1",
 		iuid:           "1",
-		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1"}}}},
+		before:         timeutil.Now(),
+		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}}}},
 		expectedStatus: http.StatusUnauthorized,
-		itemRead:       false,
+		expectedItems:  []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: false}},
+	}, {
+		desc:        "success: some feed items marked as read",
+		token:       "valid-token",
+		authSuccess: true,
+		fuid:        "1",
+		iuid:        "",
+		before:      timeutil.Now() - 1,
+		feeds: []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{
+			{UID: "1", Title: "Item 1", Timestamp: timeutil.Now() - 2, Read: false},
+			{UID: "2", Title: "Item 2", Timestamp: timeutil.Now(), Read: false},
+		}}},
+		expectedStatus: http.StatusOK,
+		expectedItems: []*feed.ItemSummary{
+			{UID: "1", Title: "Item 1", Timestamp: timeutil.Now() - 2, Read: true},
+			{UID: "2", Title: "Item 2", Timestamp: timeutil.Now(), Read: false},
+		},
 	}}
 
 	for _, test := range tests {
@@ -478,7 +510,11 @@ func TestMarkAsRead(t *testing.T) {
 				ExpectSuccess: test.authSuccess,
 			})
 
-			req, _ := http.NewRequest("POST", "/api/feeds/"+test.fuid+"/items/"+test.iuid+"/read", nil)
+			reqURL := "/api/feeds/" + test.fuid + "/items/" + test.iuid + "/read"
+			if test.iuid == "" {
+				reqURL = "/api/feeds/" + test.fuid + "/read"
+			}
+			req, _ := http.NewRequest("POST", reqURL, bytes.NewBufferString(fmt.Sprintf(`{"before": %d}`, test.before)))
 			if cookie != nil {
 				req.AddCookie(cookie)
 			}
@@ -494,10 +530,7 @@ func TestMarkAsRead(t *testing.T) {
 			}
 
 			if test.authSuccess {
-				item := feedList.FeedItem(test.fuid, test.iuid)
-				if item != nil && item.Read != test.itemRead {
-					t.Errorf("expected item read status %v, got %v", test.itemRead, item.Read)
-				}
+				compareItems(t, test.expectedItems, feedList.FeedSummary(test.fuid).Items)
 			}
 		})
 	}

@@ -28,11 +28,17 @@ function time_diff_s(a, b) {
     return Math.round((a - b) / 1000);
 }
 
+function now() {
+    return Math.floor(Date.now()/1000);
+}
+
 const CACHE_LIST = "list"
 const CACHE_FEED = "feed"
 const CACHE_ITEM = "item"
 
-class FeedCache {
+// FeedStore is a simple in-memory cache for feed data that reaches out to the
+// backend when data is not available or has expired.
+class FeedStore {
     constructor() {
         this.entries = {};
     }
@@ -88,8 +94,7 @@ class FeedCache {
         }
 
         if (what == CACHE_FEED) {
-            let before = this.entries[fuid]?.timestamp || new Date();
-            before = Math.round(before.getTime() / 1000);
+            let before = this.entries[fuid]?.data?.last_updated || now();
             let rsp = await fetch(`/api/feeds/${fuid}/read`, {
                 method: "POST",
                 body: JSON.stringify({before}),
@@ -126,7 +131,7 @@ class FeedCache {
 // Page state.
 var previous_hash = window.location.hash;
 var current_hash = window.location.hash;
-var feed_cache = new FeedCache();
+var feed_cache = new FeedStore();
 var last_refresh = new Date();
 
 function error(err) {

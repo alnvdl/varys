@@ -19,7 +19,7 @@ type FeedLister interface {
 	Summary() []*feed.FeedSummary
 	FeedSummary(uid string) *feed.FeedSummary
 	FeedItem(fuid, iuid string) *feed.ItemSummary
-	MarkRead(fuid, iuid string) bool
+	MarkRead(fuid, iuid string, before int64) bool
 }
 
 // HandlerParams contains the parameters for creating a new API server.
@@ -166,7 +166,21 @@ func (s *handler) item(w http.ResponseWriter, r *http.Request) {
 func (s *handler) read(w http.ResponseWriter, r *http.Request) {
 	fuid := r.PathValue("fuid")
 	iuid := r.PathValue("iuid")
-	done := s.p.FeedList.MarkRead(fuid, iuid)
+
+	var data struct {
+		Before int64 `json:"before"`
+	}
+
+	if iuid == "" && r.Body != nil {
+		dec := json.NewDecoder(r.Body)
+		err := dec.Decode(&data)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "cannot decode request")
+			return
+		}
+	}
+
+	done := s.p.FeedList.MarkRead(fuid, iuid, data.Before)
 	if !done {
 		writeErrorResponse(w, http.StatusNotFound, "item or feed not found")
 		return

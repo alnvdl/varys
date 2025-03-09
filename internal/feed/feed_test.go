@@ -49,97 +49,90 @@ func TestFeedPrune(t *testing.T) {
 		initialItems  []feed.Item
 		limit         int
 		expectedItems []feed.Item
-	}{
-		{
-			desc:          "nil items, limit is 5",
-			initialItems:  nil,
-			limit:         5,
-			expectedItems: []feed.Item{},
+	}{{
+		desc:          "nil items, limit is 5",
+		initialItems:  nil,
+		limit:         5,
+		expectedItems: []feed.Item{},
+	}, {
+		desc:          "0 items, limit is 5",
+		initialItems:  []feed.Item{},
+		limit:         5,
+		expectedItems: []feed.Item{},
+	}, {
+		desc: "3 items, limit is 5",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
 		},
-		{
-			desc:          "0 items, limit is 5",
-			initialItems:  []feed.Item{},
-			limit:         5,
-			expectedItems: []feed.Item{},
+		limit: 5,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
 		},
-		{
-			desc: "3 items, limit is 5",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-			},
-			limit: 5,
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-			},
+	}, {
+		desc: "5 items, limit is 5",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
 		},
-		{
-			desc: "5 items, limit is 5",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-			},
-			limit: 5,
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-			},
+		limit: 5,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
 		},
-		{
-			desc: "10 items, limit is 5",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-				{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 5)},
-				{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 6)},
-				{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 7)},
-				{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 8)},
-				{RawItem: feed.RawItem{URL: "url10"}, Timestamp: timeutil.HoursAgo(now, 9)},
-			},
-			limit: 5,
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-			},
+	}, {
+		desc: "10 items, limit is 5",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 5)},
+			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 6)},
+			{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 7)},
+			{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 8)},
+			{RawItem: feed.RawItem{URL: "url10"}, Timestamp: timeutil.HoursAgo(now, 9)},
 		},
-		{
-			desc: "10 items out of order, limit is 4",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 9)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 7)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 8)},
-				{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 6)},
-				{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 4)},
-				{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
-			},
-			limit: 4,
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
-			},
+		limit: 5,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
 		},
-	}
+	}, {
+		desc: "10 items out of order, limit is 4",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 9)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 7)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 8)},
+			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 6)},
+			{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
+		},
+		limit: 4,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
+		},
+	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -162,73 +155,67 @@ func TestFeedSortedItems(t *testing.T) {
 		desc          string
 		initialItems  []feed.Item
 		expectedItems []feed.Item
-	}{
-		{
-			desc:          "no items",
-			initialItems:  nil,
-			expectedItems: []feed.Item{},
+	}{{
+		desc:          "no items",
+		initialItems:  nil,
+		expectedItems: []feed.Item{},
+	}, {
+		desc: "1 item",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
 		},
-		{
-			desc: "1 item",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-			},
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-			},
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
 		},
-		{
-			desc: "5 items already in order",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-			},
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
-			},
+	}, {
+		desc: "5 items already in order",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
 		},
-		{
-			desc: "5 items out-of-order",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 4)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 2)},
-			},
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 1)},
-				{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 2)},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 3)},
-				{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 4)},
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
-			},
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
 		},
-		{
-			desc: "5 items with the same timestamp and different URLs",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url5", Position: 5}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url3", Position: 3}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url1", Position: 1}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url4", Position: 4}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2", Position: 2}, Timestamp: now},
-			},
-			expectedItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1", Position: 1}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url2", Position: 2}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url3", Position: 3}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url4", Position: 4}, Timestamp: now},
-				{RawItem: feed.RawItem{URL: "url5", Position: 5}, Timestamp: now},
-			},
+	}, {
+		desc: "5 items out-of-order",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 2)},
 		},
-	}
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
+		},
+	}, {
+		desc: "5 items with the same timestamp and different URLs",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url5", Position: 5}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url3", Position: 3}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url1", Position: 1}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url4", Position: 4}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2", Position: 2}, Timestamp: now},
+		},
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1", Position: 1}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2", Position: 2}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url3", Position: 3}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url4", Position: 4}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url5", Position: 5}, Timestamp: now},
+		},
+	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -258,20 +245,32 @@ func TestMarkAllRead(t *testing.T) {
 	tests := []struct {
 		desc         string
 		initialItems []feed.Item
-	}{
-		{
-			desc:         "no items",
-			initialItems: []feed.Item{},
+		before       int64
+		expectedRead []bool
+	}{{
+		desc:         "no items",
+		initialItems: []feed.Item{},
+		before:       now,
+		expectedRead: []bool{},
+	}, {
+		desc: "multiple items, all marked as read",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now, Read: false},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1), Read: false},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2), Read: false},
 		},
-		{
-			desc: "multiple items",
-			initialItems: []feed.Item{
-				{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now, Read: false},
-				{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1), Read: false},
-				{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2), Read: false},
-			},
+		before:       now + 1,
+		expectedRead: []bool{true, true, true},
+	}, {
+		desc: "multiple items, some marked as read",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now, Read: false},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1), Read: false},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2), Read: false},
 		},
-	}
+		before:       timeutil.HoursAgo(now, 1),
+		expectedRead: []bool{false, true, true},
+	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -282,13 +281,13 @@ func TestMarkAllRead(t *testing.T) {
 				f.Items[feed.UID(item.URL)] = &item
 			}
 
-			// Mark all items as read
-			f.MarkAllRead()
+			// Mark items as read before the specified timestamp.
+			f.MarkAllRead(test.before)
 
-			// Verify all items are marked as read
-			for _, item := range f.Items {
-				if !item.Read {
-					t.Errorf("expected item %v to be marked as read", item.URL)
+			// Verify items are marked as expected.
+			for i, item := range f.SortedItems() {
+				if item.Read != test.expectedRead[i] {
+					t.Errorf("expected item %v read status to be %v, got %v", item.URL, test.expectedRead[i], item.Read)
 				}
 			}
 		})

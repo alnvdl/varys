@@ -150,9 +150,12 @@ func (l *List) FeedItem(fuid, iuid string) *feed.ItemSummary {
 	return nil
 }
 
-// MarkRead marks the feed or item with the given UID as read. It returns true
-// if the feed or item was found and marked as read, false otherwise.
-func (l *List) MarkRead(fuid, iuid string) bool {
+// MarkRead marks the feed or item with the given UID as read. If iuid is
+// empty, only items whose timestamp is less than or equal to before are marked
+// read. If fuid is "all", all feeds are marked as read, also respecting the
+// before timestamp. If the feed or item is found, true is returned, otherwise
+// false.
+func (l *List) MarkRead(fuid, iuid string, before int64) bool {
 	defer l.delayPersist()
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()
@@ -160,7 +163,7 @@ func (l *List) MarkRead(fuid, iuid string) bool {
 	// Marking all feeds as read.
 	if fuid == "all" {
 		for _, feed := range l.feeds {
-			feed.MarkAllRead()
+			feed.MarkAllRead(before)
 		}
 		return true
 	}
@@ -174,7 +177,7 @@ func (l *List) MarkRead(fuid, iuid string) bool {
 			}
 		} else {
 			// Marking a feed as read.
-			f.MarkAllRead()
+			f.MarkAllRead(before)
 			return true
 		}
 	}

@@ -148,10 +148,13 @@ func (f *Feed) SortedItems() []Item {
 	return sortedItems
 }
 
-// MarkAllRead marks all feed items as read.
-func (f *Feed) MarkAllRead() {
+// MarkAllRead marks all feed items as read if their timestamp is less than or
+// equal to the given before timestamp.
+func (f *Feed) MarkAllRead(before int64) {
 	for _, item := range f.Items {
-		item.MarkRead()
+		if item.Timestamp <= before {
+			item.MarkRead()
+		}
 	}
 }
 
