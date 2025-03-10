@@ -235,7 +235,7 @@ func TestParseXML(t *testing.T) {
 			URL:      "http://example.com/item1",
 			Title:    "Item 1",
 			Authors:  "Author 1, Author 2",
-			Content:  "<div>should be in output</div><b>Content 1</b>",
+			Content:  "<div>should be in output</div>\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t<b>Content 1</b>",
 			Position: 0,
 		}, {
 			URL:      "http://example.com/item2",

@@ -50,7 +50,7 @@ var defaultAllowedAttrs = map[string]map[string]bool{
 	"img":     {"alt": true, "src": true},
 }
 
-// silentlySanitizeHTML works like sanitizeHTML but it uses a default
+// SilentlySanitizeHTML works like sanitizeHTML but it uses a default
 // configuration and silences errors.
 func silentlySanitizeHTML(input string) string {
 	sanitized, _ := sanitizeHTML(input, defaultAllowedTags, defaultAllowedAttrs)
@@ -87,10 +87,9 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 		var attrs []html.Attribute
 		for _, attr := range node.Attr {
 			if allowedAttrs[node.Data][attr.Key] {
-				if (attr.Key == "href" || attr.Key == "src") &&
+				if (attr.Key == "href") &&
 					!strings.HasPrefix(attr.Val, "http://") &&
-					!strings.HasPrefix(attr.Val, "https://") &&
-					!strings.HasPrefix(attr.Val, "data:") {
+					!strings.HasPrefix(attr.Val, "https://") {
 					continue
 				}
 				attrs = append(attrs, html.Attribute(attr))
@@ -101,7 +100,7 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 		newParent = newNode
 	}
 
-	isValidTextNode := node.Type == html.TextNode && node.Parent != nil && strings.TrimSpace(node.Data) != ""
+	isValidTextNode := node.Type == html.TextNode && node.Parent != nil
 	if isValidTextNode && (allowedTags[node.Parent.Data] || node.Parent.DataAtom == atom.Body) {
 		newNode := &html.Node{
 			Type: html.TextNode,

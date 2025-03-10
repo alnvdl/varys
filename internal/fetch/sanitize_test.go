@@ -32,7 +32,7 @@ func TestSanitizeHTML(t *testing.T) {
 		expected: `<img src="http://example.com/image.jpg" alt="image"/>`,
 	}, {
 		input:    `<img src="ftp://example.com/image.jpg" alt="image">`,
-		expected: `<img alt="image"/>`,
+		expected: `<img src="ftp://example.com/image.jpg" alt="image"/>`,
 	}, {
 		input:    `<figure><img src="http://example.com/image.jpg" alt="image"><figcaption>Image</figcaption></figure>`,
 		expected: `<figure><img src="http://example.com/image.jpg" alt="image"/><figcaption>Image</figcaption></figure>`,
@@ -49,13 +49,13 @@ func TestSanitizeHTML(t *testing.T) {
 			<script>alert('xss2')</script>
 			<a href="http://example.com" title="example">Example</a><script>alert('xss')</script>
 			<figure>
-				<img src="ftp://example.com/image.jpg" data-attr="whatever" alt="image">
+				<img src="https://example.com/image.jpg" data-attr="whatever" alt="image">
 				<figcaption>Image</figcaption>
 			</figure>
 			<script>alert('xss3')</script>
 			<p>Paragraph</p>
 		</div>`,
-		expected: `<div><a href="http://example.com" title="example">Example</a><figure><img alt="image"/><figcaption>Image</figcaption></figure><p>Paragraph</p></div>`,
+		expected: "<div>\n\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t<a href=\"http://example.com\" title=\"example\">Example</a>\n\t\t\t<figure>\n\t\t\t\t<img src=\"https://example.com/image.jpg\" alt=\"image\"/>\n\t\t\t\t<figcaption>Image</figcaption>\n\t\t\t</figure>\n\t\t\t\n\t\t\t<p>Paragraph</p>\n\t\t</div>",
 	}, {
 		input: `
 		<div onclick="alert('click')">Click me</div>
@@ -70,7 +70,7 @@ func TestSanitizeHTML(t *testing.T) {
 	for _, test := range tests {
 		result := fetch.SilentlySanitizeHTML(test.input)
 		if result != test.expected {
-			t.Errorf("unexpected sanitized HTML: want `%s`, got `%s`", test.expected, result)
+			t.Errorf("unexpected sanitized HTML: got %#v, want %#v", result, test.expected)
 		}
 	}
 }
