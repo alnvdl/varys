@@ -41,10 +41,11 @@ type Atom struct {
 }
 
 type AtomEntry struct {
-	ID   string `xml:"id"`
-	GUID string `xml:"guid"`
-	Link struct {
+	ID    string `xml:"id"`
+	GUID  string `xml:"guid"`
+	Links []struct {
 		Href string `xml:"href,attr"`
+		Rel  string `xml:"rel,attr"`
 	} `xml:"link"`
 	Title     string   `xml:"title"`
 	Published string   `xml:"published"`
@@ -88,8 +89,19 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	if atomErr == nil && len(atom.Entries) > 0 {
 		baseURL := link(atom.Link.Href, "")
 		for pos, entry := range atom.Entries {
+			var url string
+			for _, link := range entry.Links {
+				if link.Rel == "self" || link.Rel == "" {
+					url = link.Href
+					break
+				}
+			}
+			if url == "" && len(entry.Links) > 0 {
+				url = entry.Links[0].Href
+			}
+
 			feedItems = append(feedItems, feed.RawItem{
-				URL:      link(entry.Link.Href, baseURL),
+				URL:      link(url, baseURL),
 				Title:    strings.TrimSpace(entry.Title),
 				Authors:  strings.TrimSpace(strings.Join(entry.Authors, ", ")),
 				Content:  silentlySanitizeHTML(coalesce(entry.Content, entry.Summary)),

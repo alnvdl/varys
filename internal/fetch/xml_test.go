@@ -152,6 +152,7 @@ func TestParseXML(t *testing.T) {
 				<entry>
 					<title>Item 1</title>
 					<link href="http://example.com/item1"/>
+					<link rel="related" href="http://example.com/item1_image"/>
 					<published>2025-01-02T15:04:05Z</published>
 					<author>
 						<name>Author 1</name>
