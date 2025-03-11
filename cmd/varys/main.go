@@ -125,15 +125,15 @@ func main() {
 		RefreshInterval: refreshInterval(),
 	})
 
-	h := web.NewHandler(&web.HandlerParams{
+	handler := web.NewHandler(&web.HandlerParams{
 		FeedList:    feedList,
 		AccessToken: accessToken(),
 		SessionKey:  sessionKey(),
 	})
 
-	srv := &http.Server{
+	server := &http.Server{
 		Addr:    ":" + port(),
-		Handler: h,
+		Handler: handler,
 	}
 
 	healthCheck := make(chan bool)
@@ -147,11 +147,11 @@ func main() {
 		close(healthCheck)
 		feedList.Close()
 		slog.Info("shutting down server")
-		srv.Shutdown(context.Background())
+		server.Shutdown(context.Background())
 	}()
 
-	slog.Info("starting server", slog.String("address", srv.Addr))
-	if err := srv.ListenAndServe(); err != nil {
+	slog.Info("starting server", slog.String("address", server.Addr))
+	if err := server.ListenAndServe(); err != nil {
 		if err == http.ErrServerClosed {
 			slog.Info("server shut down")
 		} else {

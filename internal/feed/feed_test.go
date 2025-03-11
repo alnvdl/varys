@@ -45,9 +45,12 @@ func TestFeedPrune(t *testing.T) {
 	now := time.Now().Unix()
 
 	tests := []struct {
-		desc          string
-		initialItems  []feed.Item
-		limit         int
+		desc string
+
+		initialItems []feed.Item
+		limit        int
+		params       any
+
 		expectedItems []feed.Item
 	}{{
 		desc:          "nil items, limit is 5",
@@ -132,12 +135,30 @@ func TestFeedPrune(t *testing.T) {
 			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
 			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
 		},
+	}, {
+		desc: "custom max_items param",
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 5)},
+		},
+		limit: 0,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+		},
+		params: map[string]any{"max_items": 3},
 	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			f := feed.Feed{
-				Items: make(map[string]*feed.Item),
+				Items:  make(map[string]*feed.Item),
+				Params: test.params,
 			}
 			for _, item := range test.initialItems {
 				f.Items[feed.UID(item.URL)] = &item
@@ -152,8 +173,10 @@ func TestFeedSortedItems(t *testing.T) {
 	now := time.Now().Unix()
 
 	tests := []struct {
-		desc          string
-		initialItems  []feed.Item
+		desc string
+
+		initialItems []feed.Item
+
 		expectedItems []feed.Item
 	}{{
 		desc:          "no items",
@@ -243,9 +266,11 @@ func TestMarkAllRead(t *testing.T) {
 	now := time.Now().Unix()
 
 	tests := []struct {
-		desc         string
+		desc string
+
 		initialItems []feed.Item
 		before       int64
+
 		expectedRead []bool
 	}{{
 		desc:         "no items",
@@ -298,12 +323,14 @@ func TestSummary(t *testing.T) {
 	now := time.Now().Unix()
 
 	tests := []struct {
-		desc            string
-		feeds           map[string]*feed.Feed
-		realFeed        string
-		virtualFeed     string
-		withItems       bool
-		itemMapper      bool
+		desc string
+
+		feeds       map[string]*feed.Feed
+		realFeed    string
+		virtualFeed string
+		withItems   bool
+		itemMapper  bool
+
 		expectedSummary *feed.FeedSummary
 	}{{
 		desc: "Feed with no items and withItems = true",
@@ -456,10 +483,12 @@ func TestFeedRefresh(t *testing.T) {
 	now := timeutil.Now()
 
 	tests := []struct {
-		desc           string
-		initialFeed    feed.Feed
-		items          []feed.RawItem
-		fetchErr       error
+		desc string
+
+		initialFeed feed.Feed
+		items       []feed.RawItem
+		fetchErr    error
+
 		expectedFeed   feed.Feed
 		expectedErrMsg string
 	}{{
@@ -548,8 +577,10 @@ func TestFeedRefresh(t *testing.T) {
 
 func TestFeedUID(t *testing.T) {
 	tests := []struct {
-		desc     string
-		feed     feed.Feed
+		desc string
+
+		feed feed.Feed
+
 		expected string
 	}{{
 		desc: "feed with URL",

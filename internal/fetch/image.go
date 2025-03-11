@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,15 +19,15 @@ type imageParams struct {
 	Title    string `json:"title"`
 }
 
-func (p *imageParams) validate() error {
+func (p *imageParams) Validate() error {
 	if p.MimeType == "" {
-		return fmt.Errorf("mime_type cannot be empty")
+		return errors.New("mime_type cannot be empty")
 	}
 	if p.URL == "" {
-		return fmt.Errorf("url cannot be empty")
+		return errors.New("url cannot be empty")
 	}
 	if p.Title == "" {
-		return fmt.Errorf("title cannot be empty")
+		return errors.New("title cannot be empty")
 	}
 	return nil
 }
@@ -35,7 +36,7 @@ func (p *imageParams) validate() error {
 // for images hosted in the same URL that get updated frequently.
 func parseImage(data []byte, params any) ([]feed.RawItem, error) {
 	var p imageParams
-	if err := parseParams(params, &p); err != nil {
+	if err := feed.ParseParams(params, &p); err != nil {
 		return nil, fmt.Errorf("cannot parse image params: %v", err)
 	}
 

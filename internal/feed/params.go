@@ -1,4 +1,4 @@
-package fetch
+package feed
 
 import (
 	"encoding/json"
@@ -6,13 +6,13 @@ import (
 )
 
 // feedParams is to be implemented by specific feed params structs.
-type feedParams interface {
-	validate() error
+type FeedParams interface {
+	Validate() error
 }
 
 // parseParams takes feed params, unmarshalls them into the dst struct and
 // validates them.
-func parseParams(params any, dst feedParams) error {
+func ParseParams(params any, dst FeedParams) error {
 	data, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func parseParams(params any, dst feedParams) error {
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal: %v", err)
 	}
-	if err := dst.validate(); err != nil {
+	if err := dst.Validate(); err != nil {
 		return fmt.Errorf("cannot validate: %v", err)
 	}
 	return nil

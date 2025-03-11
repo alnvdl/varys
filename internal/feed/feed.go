@@ -1,12 +1,13 @@
 package feed
 
 import (
+	"errors"
 	"log/slog"
 	"sort"
 	"strings"
 )
 
-const maxFeedItems = 100
+const defaultMaxFeedItems = 100
 
 const (
 	TypeXML   = "xml"
@@ -62,12 +63,30 @@ func (f *Feed) UID() string {
 	return UID(f.URL)
 }
 
+type feedParams struct {
+	MaxItems int `json:"max_items"`
+}
+
+func (p *feedParams) Validate() error {
+	if p.MaxItems <= 0 {
+		return errors.New("max_items must be positive")
+	}
+	return nil
+}
+
 // Prune removes items from the feed until the number of items is less than or
-// equal to n. It removes the oldest items first. If n is less than or equal to
-// zero, it prunes the feed to the default number of items.
+// equal to n. It removes the last items as determined by Feed.SortedItems. If
+// n is less than or equal to zero, it prunes the feed to the max_items
+// declared in the feed params, or if that is not defined or is invalid, the
+// default number of items.
 func (f *Feed) Prune(n int) {
 	if n <= 0 {
-		n = maxFeedItems
+		var p feedParams
+		if err := ParseParams(f.Params, &p); err == nil {
+			n = p.MaxItems
+		} else {
+			n = defaultMaxFeedItems
+		}
 	}
 	if len(f.Items) <= n {
 		return
@@ -123,7 +142,7 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	}
 	f.LastRefreshedAt = ts
 
-	f.Prune(maxFeedItems)
+	f.Prune(0)
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 

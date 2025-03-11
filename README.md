@@ -37,7 +37,11 @@ This type of feed can be used with traditional RSS or Atom XML feeds.
 {
   "type": "xml",
   "name": "Example XML Feed",
-  "url": "https://example.com/rss"
+  "url": "https://example.com/rss",
+  "params": {
+    "max_items": 50 // max_items is the optional maximum number of items to
+                    // keep in the feed. Defaults to 100.
+  }
 }
 ```
 
@@ -67,7 +71,9 @@ pages.
     // by the HTML feed parser after resolving them with base_url.
     "allowed_prefixes": [
       "https://example.com/news/"
-    ]
+    ],
+    "max_items": 50 // max_items is the optional maximum number of items to
+                    // keep in the feed. Defaults to 100.
   }
 }
 ```
@@ -87,7 +93,9 @@ hosted webcam images or weather report charts).
     // url will be used for representing the URL of the resulting feed items.
     "url": "https://example.com/image.png",
     // mime_type defines the type of image returned by the feed URL.
-    "mime_type": "image/png"
+    "mime_type": "image/png",
+    "max_items": 50 // max_items is the optional maximum number of items to
+                    // keep in the feed. Defaults to 100.
   }
 }
 ```

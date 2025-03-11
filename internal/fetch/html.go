@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -21,21 +22,21 @@ type htmlParams struct {
 	AllowedPrefixes []string          `json:"allowed_prefixes"`
 }
 
-func (p *htmlParams) validate() error {
+func (p *htmlParams) Validate() error {
 	if p.ContainerTag == "" {
-		return fmt.Errorf("container_tag cannot be empty")
+		return errors.New("container_tag cannot be empty")
 	}
 	if p.TitlePos < 0 {
-		return fmt.Errorf("title_pos cannot be negative")
+		return errors.New("title_pos cannot be negative")
 	}
 	if p.BaseURL == "" {
-		return fmt.Errorf("base_url cannot be empty")
+		return errors.New("base_url cannot be empty")
 	}
 	if _, err := url.Parse(p.BaseURL); err != nil {
 		return fmt.Errorf("cannot parse base_url: %v", err)
 	}
 	if len(p.AllowedPrefixes) == 0 {
-		return fmt.Errorf("allowed_prefixes cannot be empty")
+		return errors.New("allowed_prefixes cannot be empty")
 	}
 	return nil
 }
@@ -115,7 +116,7 @@ func extractCandidateItem(anchor *html.Node, baseURL *url.URL, allowedPrefixes [
 // params.
 func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 	var p htmlParams
-	if err := parseParams(params, &p); err != nil {
+	if err := feed.ParseParams(params, &p); err != nil {
 		return nil, fmt.Errorf("cannot parse HTML feed params: %v", err)
 	}
 	// The parseParams call should have validated the base URL already.

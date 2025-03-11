@@ -259,6 +259,6 @@ func allFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSummary {
 			itemMapper[item.UID()] = feed
 		}
 	}
-	allFeed.Prune(2048)
+	allFeed.Prune(500)
 	return allFeed.Summary(withItems, itemMapper)
 }
