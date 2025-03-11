@@ -212,5 +212,3 @@ func matchAttrs(n *html.Node, attrs map[string]string) bool {
 	}
 	return nMatches == len(attrs)
 }
-
-
