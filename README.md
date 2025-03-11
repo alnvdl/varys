@@ -380,3 +380,7 @@ All error responses follow this format:
 
 5. To deploy new versions of the image, just restart the application (assuming
    the deployment is using the `:main` tag mentioned in step 1).
+
+## Icons
+All icons in this project come from the Bootstrap project:
+https://icons.getbootstrap.com/.

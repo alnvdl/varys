@@ -592,6 +592,10 @@ func TestStatic(t *testing.T) {
 			if test.expectedStatus == http.StatusOK && rr.Body.Len() == 0 {
 				t.Errorf("expected non-empty response body")
 			}
+
+			if rr.Header().Get("Cache-Control") != "max-age=86400" {
+				t.Errorf("expected Cache-Control header to be 'max-age=86400', got %v", rr.Header().Get("Cache-Control"))
+			}
 		})
 	}
 }

@@ -82,14 +82,18 @@ func NewHandler(p *HandlerParams) *handler {
 		handler: h.status,
 		authn:   false,
 	}, {
-		method:  "GET",
-		path:    "/static/",
-		handler: http.FileServer(http.FS(staticFiles)).ServeHTTP,
-		authn:   false,
+		method: "GET",
+		path:   "/static/",
+		handler: func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "max-age=86400")
+			http.FileServer(http.FS(staticFiles)).ServeHTTP(w, r)
+		},
+		authn: false,
 	}, {
 		method: "GET",
 		path:   "/",
 		handler: func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "max-age=86400")
 			http.ServeFileFS(w, r, staticFiles, "static/index.html")
 		},
 		authn: false,
