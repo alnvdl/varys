@@ -23,16 +23,19 @@ type htmlParams struct {
 
 func (p *htmlParams) validate() error {
 	if p.ContainerTag == "" {
-		return fmt.Errorf("container tag cannot be empty")
+		return fmt.Errorf("container_tag cannot be empty")
 	}
 	if p.TitlePos < 0 {
-		return fmt.Errorf("title position cannot be negative")
+		return fmt.Errorf("title_pos cannot be negative")
 	}
 	if p.BaseURL == "" {
-		return fmt.Errorf("base URL cannot be empty")
+		return fmt.Errorf("base_url cannot be empty")
+	}
+	if _, err := url.Parse(p.BaseURL); err != nil {
+		return fmt.Errorf("cannot parse base_url: %v", err)
 	}
 	if len(p.AllowedPrefixes) == 0 {
-		return fmt.Errorf("allowed prefixes cannot be empty")
+		return fmt.Errorf("allowed_prefixes cannot be empty")
 	}
 	return nil
 }
@@ -57,7 +60,7 @@ func (c *candidateItem) merge(other *candidateItem) {
 // expected to be an anchor tag, or a nil item will be returned. The function
 // walks the node and its children to extract the candidate item. Nil will be
 // returned if resolveURL returns an empty URL.
-func extractCandidateItem(anchor *html.Node, baseURL string, allowedPrefixes []string) *candidateItem {
+func extractCandidateItem(anchor *html.Node, baseURL *url.URL, allowedPrefixes []string) *candidateItem {
 	if anchor.Type != html.ElementNode || anchor.Data != "a" {
 		return nil
 	}
@@ -65,7 +68,7 @@ func extractCandidateItem(anchor *html.Node, baseURL string, allowedPrefixes []s
 	var url string
 	for _, attr := range anchor.Attr {
 		if attr.Key == "href" {
-			url = resolveURL(attr.Val, baseURL, allowedPrefixes)
+			url = urlToString(resolveURL(attr.Val, baseURL, allowedPrefixes))
 		}
 	}
 	if url == "" {
@@ -82,7 +85,7 @@ func extractCandidateItem(anchor *html.Node, baseURL string, allowedPrefixes []s
 					imgNode := &html.Node{
 						Type: html.ElementNode,
 						Data: "img",
-						Attr: []html.Attribute{{Key: "src", Val: imgSrc}},
+						Attr: []html.Attribute{{Key: "src", Val: imgSrc.String()}},
 					}
 					var buf bytes.Buffer
 					html.Render(&buf, imgNode)
@@ -115,6 +118,8 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 	if err := parseParams(params, &p); err != nil {
 		return nil, fmt.Errorf("cannot parse HTML feed params: %v", err)
 	}
+	// The parseParams call should have validated the base URL already.
+	baseURL, _ := url.Parse(p.BaseURL)
 
 	if p.Encoding != "" {
 		if encodingMap[p.Encoding] == nil {
@@ -151,7 +156,7 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 		var findCandidateItems func(*html.Node)
 		findCandidateItems = func(n *html.Node) {
 			if n.Type == html.ElementNode && n.Data == "a" {
-				ci := extractCandidateItem(n, p.BaseURL, p.AllowedPrefixes)
+				ci := extractCandidateItem(n, baseURL, p.AllowedPrefixes)
 				if ci != nil {
 					if cisByURL[ci.url] == nil {
 						ci.position = position
@@ -188,7 +193,7 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 		rawItems = append(rawItems, feed.RawItem{
 			URL:      ci.url,
 			Title:    title,
-			Content:  silentlySanitizeHTML(strings.Join(ci.parts, "<br/>")),
+			Content:  silentlySanitizeHTML(strings.Join(ci.parts, "<br/>"), nil),
 			Position: ci.position,
 		})
 	}
@@ -208,33 +213,4 @@ func matchAttrs(n *html.Node, attrs map[string]string) bool {
 	return nMatches == len(attrs)
 }
 
-// resolveURL receives an absolute or relative URL u and a base URL. If u is
-// relative (as determined by url.IsAbs) it is resolved against the base URL.
-// If u cannot be parsed as a URL, or if u is relative and baseURL cannot be
-// parse as a URL, an empty string is returned. If allowedPrefixes is nil, the
-// resolved URL is returned without checking its prefix. If allowedPrefixes is
-// not nil, the resolved URL is only returned if it has a prefix that matches
-// one of the allowed prefixes; otherwise, an empty string is returned.
-func resolveURL(u, base string, allowedPrefixes []string) string {
-	parsedURL, err := url.Parse(u)
-	if err != nil {
-		return ""
-	}
-	if !parsedURL.IsAbs() {
-		baseURL, err := url.Parse(base)
-		if err != nil {
-			return ""
-		}
-		parsedURL = baseURL.ResolveReference(parsedURL)
-	}
-	resolvedURL := parsedURL.String()
-	if allowedPrefixes == nil {
-		return resolvedURL
-	}
-	for _, allowed := range allowedPrefixes {
-		if strings.HasPrefix(resolvedURL, allowed) {
-			return resolvedURL
-		}
-	}
-	return ""
-}
+

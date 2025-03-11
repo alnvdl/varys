@@ -68,17 +68,18 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	rss := RSS{}
 	rssErr := tryParseFeed(data, &rss)
 	if rssErr == nil && (len(rss.Channel.Items) > 0 || len(rss.Items) > 0) {
-		baseURL := link(rss.Channel.Link, "")
+		baseURL := absoluteURL(rss.Channel.Link)
 		items := rss.Channel.Items
 		if len(items) == 0 {
 			items = rss.Items
 		}
 		for pos, item := range items {
+			resolvedItemURL := resolveURL(item.Link, baseURL, nil)
 			feedItems = append(feedItems, feed.RawItem{
-				URL:      link(item.Link, baseURL),
+				URL:      urlToString(resolvedItemURL),
 				Title:    strings.TrimSpace(item.Title),
 				Authors:  strings.TrimSpace(strings.Join(append(item.Authors, item.Creator...), ", ")),
-				Content:  silentlySanitizeHTML(coalesce(item.Encoded, item.Description)),
+				Content:  silentlySanitizeHTML(coalesce(item.Encoded, item.Description), resolvedItemURL),
 				Position: pos,
 			})
 		}
@@ -87,24 +88,27 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	atom := Atom{}
 	atomErr := tryParseFeed(data, &atom)
 	if atomErr == nil && len(atom.Entries) > 0 {
-		baseURL := link(atom.Link.Href, "")
+		baseURL := absoluteURL(atom.Link.Href)
 		for pos, entry := range atom.Entries {
-			var url string
+			// Atom may have multiple links for entries, prefer the most
+			// logical one (with rel="self" or no rel attribute), or pick the
+			// first one if none of the above are found.
+			var itemURL string
 			for _, link := range entry.Links {
 				if link.Rel == "self" || link.Rel == "" {
-					url = link.Href
+					itemURL = link.Href
 					break
 				}
 			}
-			if url == "" && len(entry.Links) > 0 {
-				url = entry.Links[0].Href
+			if itemURL == "" && len(entry.Links) > 0 {
+				itemURL = entry.Links[0].Href
 			}
-
+			resolvedItemURL := resolveURL(itemURL, baseURL, nil)
 			feedItems = append(feedItems, feed.RawItem{
-				URL:      link(url, baseURL),
+				URL:      urlToString(resolvedItemURL),
 				Title:    strings.TrimSpace(entry.Title),
 				Authors:  strings.TrimSpace(strings.Join(entry.Authors, ", ")),
-				Content:  silentlySanitizeHTML(coalesce(entry.Content, entry.Summary)),
+				Content:  silentlySanitizeHTML(coalesce(entry.Content, entry.Summary), resolvedItemURL),
 				Position: pos,
 			})
 		}
@@ -117,26 +121,15 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 	return feedItems, err
 }
 
-func link(link, base string) string {
-	if link == "" {
-		return ""
+// absoluteURL returns the URL for input if it is a valid absolute URL,
+// otherwise it returns nil.
+func absoluteURL(input string) *url.URL {
+	u, err := url.Parse(input)
+	if err != nil || !u.IsAbs() {
+		return nil
 	}
-	u, err := url.Parse(link)
-	if err != nil {
-		return ""
-	}
+	return u
 
-	if u.IsAbs() && (u.Scheme == "http" || u.Scheme == "https") {
-		return link
-	} else if base != "" {
-		baseURL, err := url.Parse(base)
-		if err != nil {
-			return ""
-		}
-		return baseURL.ResolveReference(u).String()
-	}
-
-	return ""
 }
 
 func coalesce(values ...string) string {

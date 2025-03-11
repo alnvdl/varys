@@ -3,6 +3,7 @@ package fetch
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -52,15 +53,16 @@ var defaultAllowedAttrs = map[string]map[string]bool{
 
 // SilentlySanitizeHTML works like sanitizeHTML but it uses a default
 // configuration and silences errors.
-func silentlySanitizeHTML(input string) string {
-	sanitized, _ := sanitizeHTML(input, defaultAllowedTags, defaultAllowedAttrs)
+func silentlySanitizeHTML(input string, baseURL *url.URL) string {
+	sanitized, _ := sanitizeHTML(input, defaultAllowedTags, defaultAllowedAttrs, baseURL)
 	return sanitized
 }
 
 // sanitizeHTML sanitizes the input HTML string by allowing only specific tags
 // and attributes in a way known to be safe for including as a fragment inside
-// other HTML.
-func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool) (string, error) {
+// other HTML. It also resolves relative URLs in href and src attrs using the
+// provided baseURL if not nil.
+func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool, baseURL *url.URL) (string, error) {
 	doc, err := html.Parse(strings.NewReader(input))
 	if err != nil {
 		return "", fmt.Errorf("cannot parse HTML: %v", err)
@@ -69,7 +71,7 @@ func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[st
 	newDoc := &html.Node{
 		Type: html.DocumentNode,
 	}
-	sanitizeNode(doc, newDoc, allowedTags, allowedAttrs)
+	sanitizeNode(doc, newDoc, allowedTags, allowedAttrs, baseURL)
 
 	var buf bytes.Buffer
 	if err := html.Render(&buf, newDoc); err != nil {
@@ -78,7 +80,7 @@ func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[st
 	return strings.TrimSpace(buf.String()), nil
 }
 
-func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool) {
+func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool, baseURL *url.URL) {
 	if node.Type == html.ElementNode && allowedTags[node.Data] {
 		newNode := &html.Node{
 			Type: html.ElementNode,
@@ -87,10 +89,14 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 		var attrs []html.Attribute
 		for _, attr := range node.Attr {
 			if allowedAttrs[node.Data][attr.Key] {
-				if (attr.Key == "href") &&
-					!strings.HasPrefix(attr.Val, "http://") &&
-					!strings.HasPrefix(attr.Val, "https://") {
-					continue
+				if attr.Key == "href" || attr.Key == "src" {
+					parsedURL, err := url.Parse(attr.Val)
+					if err != nil {
+						continue
+					}
+					if baseURL != nil && !parsedURL.IsAbs() {
+						attr.Val = baseURL.ResolveReference(parsedURL).String()
+					}
 				}
 				attrs = append(attrs, html.Attribute(attr))
 			}
@@ -113,7 +119,7 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 		if node.Type == html.DocumentNode ||
 			(node.Type == html.ElementNode && allowedTags[node.Data]) ||
 			(node.Type == html.ElementNode && (node.DataAtom == atom.Html || node.DataAtom == atom.Body)) {
-			sanitizeNode(c, newParent, allowedTags, allowedAttrs)
+			sanitizeNode(c, newParent, allowedTags, allowedAttrs, baseURL)
 		}
 	}
 }

@@ -202,7 +202,7 @@ func TestParseXML(t *testing.T) {
 		xml: `
 			<rss>
 				<channel>
-					<link>http://example.com</link>
+					<link>should/be/ignored</link> <!-- not an absolute URL, but OK -->
 					<item>
 						<title>Item 1</title>
 						<link>http://example.com/item1</link>
@@ -224,7 +224,7 @@ func TestParseXML(t *testing.T) {
 					</entry>
 					<item>
 						<title>Item 2</title>
-						<link>http://example.com/item2</link>
+						<link>/item2</link> <!-- cannot be resolved, but OK -->
 						<pubDate>Mon, 02 Jan 2025 15:04:05 MST</pubDate>
 						<dc:creator>Author 3</dc:creator>
 						<content:encoded>Content 2</content:encoded>
@@ -238,7 +238,7 @@ func TestParseXML(t *testing.T) {
 			Content:  "<div>should be in output</div>\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t<b>Content 1</b>",
 			Position: 0,
 		}, {
-			URL:      "http://example.com/item2",
+			URL:      "/item2",
 			Title:    "Item 2",
 			Authors:  "Author 3",
 			Content:  "Content 2",
@@ -272,7 +272,7 @@ func TestParseXML(t *testing.T) {
 				</entry>
 				<entry>
 					<title>Item 2</title>
-					<link href="http://example.com/item2"/>
+					<link href="item2"/> <!-- should be resolved -->
 					<published>2025-01-03T15:04:05-07:00</published>
 					<author>
 						<name>Author 3</name>

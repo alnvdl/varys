@@ -32,7 +32,7 @@ func TestParseHTML(t *testing.T) {
 			"base_url":         "https://example.com",
 			"allowed_prefixes": []string{"https://example.com"},
 		},
-		err: "cannot parse HTML feed params: cannot validate: container tag cannot be empty",
+		err: "cannot parse HTML feed params: cannot validate: container_tag cannot be empty",
 	}, {
 		desc: "error: title position cannot be negative",
 		html: `<html><body>
@@ -45,7 +45,7 @@ func TestParseHTML(t *testing.T) {
 			"base_url":         "https://example.com",
 			"allowed_prefixes": []string{"https://example.com"},
 		},
-		err: "cannot parse HTML feed params: cannot validate: title position cannot be negative",
+		err: "cannot parse HTML feed params: cannot validate: title_pos cannot be negative",
 	}, {
 		desc: "error: base URL cannot be empty",
 		html: `<html><body>
@@ -57,7 +57,7 @@ func TestParseHTML(t *testing.T) {
 			"base_url":         "",
 			"allowed_prefixes": []string{"https://example.com"},
 		},
-		err: "cannot parse HTML feed params: cannot validate: base URL cannot be empty",
+		err: "cannot parse HTML feed params: cannot validate: base_url cannot be empty",
 	}, {
 		desc: "error: allowed prefixes cannot be empty",
 		html: `<html><body>
@@ -69,7 +69,7 @@ func TestParseHTML(t *testing.T) {
 			"base_url":         "https://example.com",
 			"allowed_prefixes": []string{},
 		},
-		err: "cannot parse HTML feed params: cannot validate: allowed prefixes cannot be empty",
+		err: "cannot parse HTML feed params: cannot validate: allowed_prefixes cannot be empty",
 	}, {
 		desc: "error: unknown encoding",
 		html: `<html><body>
