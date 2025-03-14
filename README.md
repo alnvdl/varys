@@ -39,8 +39,9 @@ This type of feed can be used with traditional RSS or Atom XML feeds.
   "name": "Example XML Feed",
   "url": "https://example.com/rss",
   "params": {
-    "max_items": 50 // max_items is the optional maximum number of items to
-                    // keep in the feed. Defaults to 100.
+   // max_items is the optional maximum number of items to keep in the feed.
+   // Defaults to 100.
+    "max_items": 50
   }
 }
 ```
@@ -72,13 +73,14 @@ pages.
     "allowed_prefixes": [
       "https://example.com/news/"
     ],
-    "max_items": 50 // max_items is the optional maximum number of items to
-                    // keep in the feed. Defaults to 100.
+    // max_items is the optional maximum number of items to keep in the feed.
+    // Defaults to 100.
+    "max_items": 50
   }
 }
 ```
 
-### Image feeds (type `image`)
+### Image feeds (type `img`)
 This type of feed can be used for images that are updated frequently (e.g.,
 hosted webcam images or weather report charts).
 ```jsonc
@@ -94,8 +96,9 @@ hosted webcam images or weather report charts).
     "url": "https://example.com/image.png",
     // mime_type defines the type of image returned by the feed URL.
     "mime_type": "image/png",
-    "max_items": 50 // max_items is the optional maximum number of items to
-                    // keep in the feed. Defaults to 100.
+    // max_items is the optional maximum number of items to keep in the feed.
+    // Defaults to 100.
+    "max_items": 50
   }
 }
 ```
@@ -328,9 +331,9 @@ Returns the status and version of the application.
 
 ### Authentication
 
-The login happens is triggered via JavaScript: the page will detect the
+The login process is triggered via JavaScript: the page will detect the
 `#token:...` hash in the URL and call the `POST /login` endpoint with the
-token. That leads to a session token being set if the token is correct.
+token. That leads to a session cookie being set if the token is correct.
 
 Please note that this design means that the browser may keep the token in the
 history. The typical pattern is to actually bookmark the reader with the token.
@@ -353,9 +356,12 @@ All error responses follow this format:
 ```
 
 ## Deploying in Azure App Service
+It is quite easy to deploy and run this application on the Azure App Service
+free tier, as long as you have a reasonable number of feeds (less than 100).
 
-1. Deploy the app in Azure following the [quick start guide](https://learn.microsoft.com/en-us/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-azure-portal).
-   When selecting the container, input `ghcr.io` as the registry and
+1. Deploy the app in Azure following the
+   [quick start guide](https://learn.microsoft.com/en-us/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-azure-portal).
+   When selecting the container image, input `ghcr.io` as the registry and
    `alnvdl/varys:main` as the image, leaving the startup command blank.
 
 2. Make sure to set the following environment variables in the deployment:
