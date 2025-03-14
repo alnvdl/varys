@@ -35,26 +35,27 @@ func TestListRefresh(t *testing.T) {
 
 	tests := []struct {
 		desc           string
-		initialFeeds   map[string]*feed.Feed
+		initialFeeds   []*list.InputFeed
 		expectedFeeds  map[string]*feed.Feed
 		expectedErrMsg string
 	}{{
 		desc:          "feed list is empty",
-		initialFeeds:  map[string]*feed.Feed{},
+		initialFeeds:  []*list.InputFeed{},
 		expectedFeeds: map[string]*feed.Feed{},
 	}, {
 		desc: "feed list has 1 feed",
-		initialFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name:  "Feed 1",
-				URL:   "http://example.com/feed1",
-				Items: map[string]*feed.Item{},
+		initialFeeds: []*list.InputFeed{
+			{
+				Name: "Feed 1",
+				URL:  "http://example.com/feed1",
+				Type: "xml",
 			},
 		},
 		expectedFeeds: map[string]*feed.Feed{
-			"feed1": {
+			feed.UID("http://example.com/feed1"): {
 				Name: "Feed 1",
 				URL:  "http://example.com/feed1",
+				Type: "xml",
 				Items: map[string]*feed.Item{
 					feed.UID("http://example.com/item1"): {
 						RawItem: feed.RawItem{
@@ -70,27 +71,28 @@ func TestListRefresh(t *testing.T) {
 		},
 	}, {
 		desc: "feed list has 3 feeds",
-		initialFeeds: map[string]*feed.Feed{
-			"feed1": {
-				Name:  "Feed 1",
-				URL:   "http://example.com/feed1",
-				Items: map[string]*feed.Item{},
+		initialFeeds: []*list.InputFeed{
+			{
+				Name: "Feed 1",
+				URL:  "http://example.com/feed1",
+				Type: "xml",
 			},
-			"feed2": {
-				Name:  "Feed 2",
-				URL:   "http://example.com/feed2",
-				Items: map[string]*feed.Item{},
+			{
+				Name: "Feed 2",
+				URL:  "http://example.com/feed2",
+				Type: "xml",
 			},
-			"feed3": {
-				Name:  "Feed 3",
-				URL:   "http://example.com/feed3",
-				Items: map[string]*feed.Item{},
+			{
+				Name: "Feed 3",
+				URL:  "http://example.com/feed3",
+				Type: "xml",
 			},
 		},
 		expectedFeeds: map[string]*feed.Feed{
-			"feed1": {
+			feed.UID("http://example.com/feed1"): {
 				Name: "Feed 1",
 				URL:  "http://example.com/feed1",
+				Type: "xml",
 				Items: map[string]*feed.Item{
 					feed.UID("http://example.com/item1"): {
 						RawItem: feed.RawItem{
@@ -103,9 +105,10 @@ func TestListRefresh(t *testing.T) {
 				},
 				LastRefreshedAt: now,
 			},
-			"feed2": {
+			feed.UID("http://example.com/feed2"): {
 				Name: "Feed 2",
 				URL:  "http://example.com/feed2",
+				Type: "xml",
 				Items: map[string]*feed.Item{
 					feed.UID("http://example.com/item2"): {
 						RawItem: feed.RawItem{
@@ -118,9 +121,10 @@ func TestListRefresh(t *testing.T) {
 				},
 				LastRefreshedAt: now,
 			},
-			"feed3": {
+			feed.UID("http://example.com/feed3"): {
 				Name:             "Feed 3",
 				URL:              "http://example.com/feed3",
+				Type:             "xml",
 				LastRefreshError: "oh no",
 			},
 		},
@@ -129,12 +133,12 @@ func TestListRefresh(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{
-				Fetcher: mockFetcher,
+				Fetcher:      mockFetcher,
+				InitialFeeds: test.initialFeeds,
 			})
-			mem.SetFeeds(l, test.initialFeeds)
 			l.Refresh(false)
 			for key, expectedFeed := range test.expectedFeeds {
-				actualFeed, ok := mem.Feeds(l)[key]
+				actualFeed, ok := mem.FeedsMap(l)[key]
 				if !ok {
 					t.Fatalf("expected feed %s to be present", key)
 				}
@@ -228,7 +232,7 @@ func TestAutoRefresh(t *testing.T) {
 		},
 	}
 	for key, expectedFeed := range expectedFeeds {
-		actualFeed, ok := mem.Feeds(l)[key]
+		actualFeed, ok := mem.FeedsMap(l)[key]
 		if !ok {
 			t.Fatalf("expected feed %s to be present", key)
 		}
@@ -306,7 +310,7 @@ func TestAutoRefresh(t *testing.T) {
 		},
 	}
 	for key, expectedFeed := range expectedFeeds {
-		actualFeed, ok := mem.Feeds(l)[key]
+		actualFeed, ok := mem.FeedsMap(l)[key]
 		if !ok {
 			t.Fatalf("expected feed %s to be present", key)
 		}

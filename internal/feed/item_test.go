@@ -114,3 +114,114 @@ func TestItemUID(t *testing.T) {
 		})
 	}
 }
+
+func TestItemSummary(t *testing.T) {
+	tests := []struct {
+		desc           string
+		item           Item
+		feed           Feed
+		includeContent bool
+		expected       ItemSummary
+	}{{
+		desc: "item with regular feed with content",
+		item: Item{
+			RawItem:   RawItem{URL: "url1", Title: "Title 1", Authors: "Author 1", Content: "Content 1"},
+			FeedUID:   "feed1",
+			Timestamp: 1234567890,
+			Read:      true,
+		},
+		feed: Feed{
+			Name: "Feed 1",
+			URL:  "feed1",
+		},
+		includeContent: true,
+		expected: ItemSummary{
+			UID:       UID("url1"),
+			FeedUID:   UID("feed1"),
+			FeedName:  "Feed 1",
+			URL:       "url1",
+			Title:     "Title 1",
+			Timestamp: 1234567890,
+			Authors:   "Author 1",
+			Read:      true,
+			Content:   "Content 1",
+		},
+	}, {
+		desc: "item with regular feed without content",
+		item: Item{
+			RawItem:   RawItem{URL: "url1", Title: "Title 1", Authors: "Author 1", Content: "Content 1"},
+			FeedUID:   "feed1",
+			Timestamp: 1234567890,
+			Read:      true,
+		},
+		feed: Feed{
+			Name: "Feed 1",
+			URL:  "feed1",
+		},
+		includeContent: false,
+		expected: ItemSummary{
+			UID:       UID("url1"),
+			FeedUID:   UID("feed1"),
+			FeedName:  "Feed 1",
+			URL:       "url1",
+			Title:     "Title 1",
+			Timestamp: 1234567890,
+			Authors:   "Author 1",
+			Read:      true,
+		},
+	}, {
+		desc: "item with virtual feed named 'all' with content",
+		item: Item{
+			RawItem:   RawItem{URL: "url1", Title: "Title 1", Authors: "Author 1", Content: "Content 1"},
+			FeedUID:   "all",
+			Timestamp: 1234567890,
+			Read:      true,
+		},
+		feed: Feed{
+			Name: "all",
+		},
+		includeContent: true,
+		expected: ItemSummary{
+			UID:       UID("url1"),
+			FeedUID:   "all",
+			FeedName:  "all",
+			URL:       "url1",
+			Title:     "Title 1",
+			Timestamp: 1234567890,
+			Authors:   "Author 1",
+			Read:      true,
+			Content:   "Content 1",
+		},
+	}, {
+		desc: "item with virtual feed named 'all' without content",
+		item: Item{
+			RawItem:   RawItem{URL: "url1", Title: "Title 1", Authors: "Author 1", Content: "Content 1"},
+			FeedUID:   "all",
+			Timestamp: 1234567890,
+			Read:      true,
+		},
+		feed: Feed{
+			Name: "All",
+		},
+		includeContent: false,
+		expected: ItemSummary{
+			UID:       UID("url1"),
+			FeedUID:   "all",
+			FeedName:  "All",
+			URL:       "url1",
+			Title:     "Title 1",
+			Timestamp: 1234567890,
+			Authors:   "Author 1",
+			Read:      true,
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := test.item.Summary(&test.feed, test.includeContent)
+			if *result != test.expected {
+				t.Errorf("expected %#v, got %#v", test.expected, result)
+			}
+		})
+	}
+}

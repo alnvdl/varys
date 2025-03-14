@@ -17,13 +17,30 @@ const (
 
 // Feed represents a feed in the application.
 type Feed struct {
-	Name  string           `json:"name"`
-	Type  string           `json:"type"`
-	URL   string           `json:"url"`
+	// Name is the name of the feed as defined by the user.
+	Name string `json:"name"`
+
+	// Type is the type of the feed. It can be one of the types defined in this
+	// file.
+	Type string `json:"type"`
+
+	// URL is the URL from which the feed is fetched. If this is empty, the
+	// feed is assumed to be a virtual feed managed by the application.
+	URL string `json:"url"`
+
+	// Items is a map of items in the feed. The key is the UID of the item.
 	Items map[string]*Item `json:"items"`
 
-	Params           any    `json:"params"`
-	LastRefreshedAt  int64  `json:"updated_at"`
+	// Params is an object with parameters that are specific to the feed type.
+	// It is up to the feed type to define what these parameters are, and they
+	// are usually used when parsing or refreshing the feed.
+	Params any `json:"params"`
+
+	// LastRefreshedAt is the time when the feed was last fetched.
+	LastRefreshedAt int64 `json:"updated_at"`
+
+	// LastRefreshError is the last error that occurred when refreshing the
+	// feed.
 	LastRefreshError string `json:"error"`
 }
 
@@ -99,8 +116,9 @@ func (f *Feed) Prune(n int) {
 	}
 }
 
-// Refresh updates the feed with information coming from raw items and the
-// given fetch error, and then prunes the feed to the maximum number of items.
+// Refresh updates the feed with information coming from raw items or an error
+// coming from a fetcher, and then prunes the feed to the maximum number of
+// items.
 func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	log := slog.With(slog.String("feedName", f.Name))
 	var fetchErrMsg string

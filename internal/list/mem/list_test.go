@@ -154,7 +154,7 @@ func TestListSummary(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
-			mem.SetFeeds(l, test.feeds)
+			mem.SetFeedsMap(l, test.feeds)
 			got := l.Summary()
 			if len(got) != len(test.want) {
 				t.Fatalf("expected %d summaries, got %d", len(test.want), len(got))
@@ -259,7 +259,7 @@ func TestListFeedSummary(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
-			mem.SetFeeds(l, test.feeds)
+			mem.SetFeedsMap(l, test.feeds)
 			got := l.FeedSummary(test.uid)
 			if got == nil && test.want != nil {
 				t.Fatalf("expected summary, got nil")
@@ -341,7 +341,7 @@ func TestListFeedItem(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
-			mem.SetFeeds(l, test.feeds)
+			mem.SetFeedsMap(l, test.feeds)
 			got := l.FeedItem(test.fuid, test.iuid)
 			if got == nil && test.want != nil {
 				t.Fatalf("expected item summary, got nil")
@@ -375,7 +375,7 @@ func TestAllFeed(t *testing.T) {
 		withItems       bool
 		expectedSummary *feed.FeedSummary
 	}{{
-		desc:      "When the input feeds has no feeds",
+		desc:      "when there are no feeds",
 		feeds:     map[string]*feed.Feed{},
 		withItems: true,
 		expectedSummary: &feed.FeedSummary{
@@ -387,7 +387,7 @@ func TestAllFeed(t *testing.T) {
 			LastUpdated: now,
 		},
 	}, {
-		desc: "When all the input feeds are empty without items",
+		desc: "when all input feeds are without items",
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name:            "Feed 1",
@@ -410,7 +410,7 @@ func TestAllFeed(t *testing.T) {
 			LastUpdated: now,
 		},
 	}, {
-		desc: "When there are 10 items from 2 different feeds",
+		desc: "when there are 2 different feeds with 5 items each",
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
@@ -458,7 +458,7 @@ func TestAllFeed(t *testing.T) {
 			LastUpdated: now,
 		},
 	}, {
-		desc: "When there are more than 100 items from 3 different feeds",
+		desc: "when there are 3 different feeds each with 50 items",
 		feeds: map[string]*feed.Feed{
 			"feed1": {
 				Name: "Feed 1",
@@ -774,13 +774,13 @@ func TestListMarkRead(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
-			mem.SetFeeds(l, test.feeds)
+			mem.SetFeedsMap(l, test.feeds)
 			result := l.MarkRead(test.fuid, test.iuid, test.before)
 			if result != test.expectedResult {
 				t.Errorf("expected result %v, got %v", test.expectedResult, result)
 			}
 			for key, expectedFeed := range test.expectedFeeds {
-				actualFeed, ok := mem.Feeds(l)[key]
+				actualFeed, ok := mem.FeedsMap(l)[key]
 				if !ok {
 					t.Fatalf("expected feed %s to be present", key)
 				}
@@ -840,9 +840,9 @@ func TestListLoadFeeds(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			l := mem.NewList(mem.ListParams{})
-			mem.SetFeeds(l, test.initialFeeds)
+			mem.SetFeedsMap(l, test.initialFeeds)
 			l.LoadFeeds(test.inputFeeds)
-			actualFeeds := mem.Feeds(l)
+			actualFeeds := mem.FeedsMap(l)
 			if len(actualFeeds) != len(test.expectedFeeds) {
 				t.Fatalf("expected %d feeds, got %d", len(test.expectedFeeds), len(actualFeeds))
 			}

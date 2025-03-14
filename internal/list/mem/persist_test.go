@@ -48,7 +48,7 @@ func TestListSave(t *testing.T) {
 
 	// Save the l to a buffer in JSON.
 	l := mem.NewList(mem.ListParams{})
-	mem.SetFeeds(l, feeds)
+	mem.SetFeedsMap(l, feeds)
 	var buf bytes.Buffer
 	err := mem.Save(l, &buf)
 	if err != nil {
@@ -83,7 +83,7 @@ func (ew *errorWriter) Write(p []byte) (n int, err error) {
 func TestListSaveError(t *testing.T) {
 	t.Parallel()
 	l := mem.NewList(mem.ListParams{})
-	mem.SetFeeds(l, make(map[string]*feed.Feed))
+	mem.SetFeedsMap(l, make(map[string]*feed.Feed))
 
 	err := mem.Save(l, &errorWriter{})
 	if err == nil {
@@ -132,7 +132,7 @@ func TestListLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	loadedFeeds := mem.Feeds(loadedList)
+	loadedFeeds := mem.FeedsMap(loadedList)
 	if len(loadedFeeds) != len(feeds) {
 		t.Fatalf("expected %d feeds, got %d", len(feeds), len(loadedFeeds))
 	}

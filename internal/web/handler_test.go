@@ -599,3 +599,38 @@ func TestStatic(t *testing.T) {
 		})
 	}
 }
+
+func TestStatus(t *testing.T) {
+	feedList := &mockFeedLister{}
+	handlerParams := &web.HandlerParams{
+		FeedList:    feedList,
+		AccessToken: "valid-token",
+		SessionKey:  []byte("test-session-key"),
+	}
+	h := web.NewHandler(handlerParams)
+
+	req, _ := http.NewRequest("GET", "/status", nil)
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status %v, got %v", http.StatusOK, rr.Code)
+	}
+
+	var status struct {
+		Status  string `json:"status"`
+		Version string `json:"version"`
+	}
+	err := json.NewDecoder(rr.Body).Decode(&status)
+	if err != nil {
+		t.Fatalf("could not decode response: %v", err)
+	}
+
+	if status.Status != "ok" {
+		t.Errorf("expected status 'ok', got %v", status.Status)
+	}
+
+	if status.Version == "" {
+		t.Errorf("expected non-empty version")
+	}
+}
