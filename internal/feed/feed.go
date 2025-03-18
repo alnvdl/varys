@@ -1,3 +1,5 @@
+// Package feed provides the types and methods to manage feeds in the
+// application using an all-in-memory approach.
 package feed
 
 import (

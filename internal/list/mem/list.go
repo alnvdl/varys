@@ -1,5 +1,5 @@
-// Package mem provides implementations of an in-memory feed list with its own
-// auto-refresh and auto-persistence mechanisms.
+// Package mem provides an implementation of an in-memory feed list with its
+// own auto-refresh and auto-persistence mechanisms.
 package mem
 
 import (

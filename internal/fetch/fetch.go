@@ -1,4 +1,4 @@
-// Package fetch provides functions for fetching feeds and parsing them into
+// Package fetch provides functions for fetching feed data and parsing it into
 // raw items to be processed by the feed package.
 package fetch
 

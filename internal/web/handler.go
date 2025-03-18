@@ -1,3 +1,5 @@
+// Package web provides the HTTP handler, including the API and static
+// resources for the web UI.
 package web
 
 import (

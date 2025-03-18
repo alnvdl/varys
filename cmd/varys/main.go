@@ -1,3 +1,4 @@
+// Package main provides the entrypoint for the varys feed reader server.
 package main
 
 import (

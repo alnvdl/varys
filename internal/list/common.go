@@ -1,3 +1,4 @@
+// Package list provides basic types used by feed lists.
 package list
 
 // InputFeed represents a feed that can be added to the list (e.g., via an
