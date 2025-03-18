@@ -45,13 +45,12 @@ func TestFeedPrune(t *testing.T) {
 	now := time.Now().Unix()
 
 	tests := []struct {
-		desc string
-
-		initialItems []feed.Item
-		limit        int
-		params       any
-
-		expectedItems []feed.Item
+		desc             string
+		initialItems     []feed.Item
+		limit            int
+		params           any
+		expectedItems    []feed.Item
+		observedRawItems int
 	}{{
 		desc:          "nil items, limit is 5",
 		initialItems:  nil,
@@ -152,6 +151,56 @@ func TestFeedPrune(t *testing.T) {
 			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
 		},
 		params: map[string]any{"max_items": 3},
+	}, {
+		desc: "10 items out of order, limit is 0 and observedRawItems is 8",
+		// This is not really a realistic test, but it exercises the fact that
+		// the limit is more generous if just a few items are observed.
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 9)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 7)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 8)},
+			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 6)},
+			{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
+		},
+		limit:            0,
+		observedRawItems: 8,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url10"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url7"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url9"}, Timestamp: timeutil.HoursAgo(now, 4)},
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: timeutil.HoursAgo(now, 5)},
+			{RawItem: feed.RawItem{URL: "url8"}, Timestamp: timeutil.HoursAgo(now, 6)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 7)},
+			{RawItem: feed.RawItem{URL: "url6"}, Timestamp: timeutil.HoursAgo(now, 8)},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 9)},
+		},
+	}, {
+		desc: "5 items, limit is 0 and observedRawItems is 150",
+		// This is not really a realistic test, but it exercises the fact that
+		// the limit is more generous if a lot of items are observed.
+		initialItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
+		},
+		limit:            0,
+		observedRawItems: 150,
+		expectedItems: []feed.Item{
+			{RawItem: feed.RawItem{URL: "url1"}, Timestamp: now},
+			{RawItem: feed.RawItem{URL: "url2"}, Timestamp: timeutil.HoursAgo(now, 1)},
+			{RawItem: feed.RawItem{URL: "url3"}, Timestamp: timeutil.HoursAgo(now, 2)},
+			{RawItem: feed.RawItem{URL: "url4"}, Timestamp: timeutil.HoursAgo(now, 3)},
+			{RawItem: feed.RawItem{URL: "url5"}, Timestamp: timeutil.HoursAgo(now, 4)},
+		},
 	}}
 
 	for _, test := range tests {
@@ -163,7 +212,7 @@ func TestFeedPrune(t *testing.T) {
 			for _, item := range test.initialItems {
 				f.Items[feed.UID(item.URL)] = &item
 			}
-			f.Prune(test.limit)
+			f.Prune(test.limit, test.observedRawItems)
 			checkFeedItems(t, f, test.expectedItems)
 		})
 	}

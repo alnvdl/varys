@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-const defaultMaxFeedItems = 100
-
 const (
 	TypeXML   = "xml"
 	TypeHTML  = "html"
@@ -93,19 +91,28 @@ func (p *feedParams) Validate() error {
 
 // Prune removes items from the feed until the number of items is less than or
 // equal to n. It removes the last items as determined by Feed.SortedItems. If
-// n is less than or equal to zero, it prunes the feed to the max_items
-// declared in the feed params, or if that is not defined or is invalid, the
-// default number of items.
-func (f *Feed) Prune(n int) {
-	if n <= 0 {
+// n is less than zero, or if the feeds has less than n items, it does nothing.
+// If n is zero and observedRawItems is greater than zero, it takes into
+// account observedRawItems, trying to reach a balance between a minimum of
+// 100 items and a maximum of 200 items. If the feed's max_items param is set,
+// it is always respected as long as it is greater than zero.
+func (f *Feed) Prune(n int, observedRawItems int) {
+	if n == 0 {
 		var p feedParams
-		if err := ParseParams(f.Params, &p); err == nil {
+		if err := ParseParams(f.Params, &p); err == nil && p.MaxItems > 0 {
+			// Respect the max_items param.
 			n = p.MaxItems
-		} else {
-			n = defaultMaxFeedItems
+		} else if observedRawItems > 0 {
+			// Try to reach a balance between 100 and 200 items.
+			n = observedRawItems * 2
+			if n < 100 {
+				n = 100
+			} else if n > 200 {
+				n = 200
+			}
 		}
 	}
-	if len(f.Items) <= n {
+	if n < 0 || len(f.Items) <= n {
 		return
 	}
 	items := f.SortedItems()
@@ -160,7 +167,7 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	}
 	f.LastRefreshedAt = ts
 
-	f.Prune(0)
+	f.Prune(0, len(items))
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 
