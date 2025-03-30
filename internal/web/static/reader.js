@@ -24,14 +24,6 @@ function get_current_state() {
     }
 }
 
-function time_diff_s(a, b) {
-    return Math.round((a - b) / 1000);
-}
-
-function now() {
-    return Math.floor(Date.now()/1000);
-}
-
 const CACHE_LIST = "list"
 const CACHE_FEED = "feed"
 const CACHE_ITEM = "item"
@@ -53,9 +45,7 @@ class FeedStore {
     _get(key) {
         let entry = this.entries[key];
         if (!entry) return entry;
-        let now = new Date();
-        let age = time_diff_s(now, entry.timestamp);
-        if (age >= REFRESH_TIMEOUT) {
+        if (seconds_ago(entry.timestamp) >= REFRESH_TIMEOUT) {
             delete this.entries[key];
             return undefined;
         }
@@ -317,8 +307,8 @@ function gen_item(item, opts) {
         details.push("by " + item.authors);
     }
 
-    let ts = fromNow(new Date(parseInt(item.timestamp) * 1000));
-    details.push(ts);
+    let when = relative_time_desc(item.timestamp);
+    details.push(when);
 
     let detailsNode = document.createTextNode(details.join(" · "));
     detailsDiv.appendChild(detailsNode);
@@ -490,6 +480,18 @@ window.onload = () => {
     start();
 };
 
+// now returns the current time in seconds since the Unix epoch.
+function now() {
+    return Math.floor(new Date() / 1000);
+}
+
+// seconds_ago receives a timestamp and returns the number of seconds that have
+// passed since the given timestamp. It returns a negative number if the given
+// timestamp is in the future.
+function seconds_ago(timestamp) {
+    return now() - timestamp;
+}
+
 const seconds_in_a_minute = 60;
 const seconds_in_an_hour = 60 * seconds_in_a_minute;
 const seconds_in_a_day = 24 * seconds_in_an_hour;
@@ -512,9 +514,11 @@ const rtf = new Intl.RelativeTimeFormat("en", {
     style: "long"
 });
 
-function fromNow(datetime) {
-    let now = new Date();
-    let diff = time_diff_s(datetime, now);
+// relative_time_desc receives a timestamp and returns a human-readable string
+// in English representing the time difference between the given timestamp and
+// the current time (e.g., 3 hours ago).
+function relative_time_desc(timestamp) {
+    let diff = -seconds_ago(timestamp);
 
     let chosen_quantity = 1;
     let chosen_unit = "second";
