@@ -554,12 +554,12 @@ func TestStatic(t *testing.T) {
 		url:            "/",
 		expectedStatus: http.StatusOK,
 	}, {
-		desc:           "GET /static/reader.css",
-		url:            "/static/reader.css",
+		desc:           "GET /static/varys.css",
+		url:            "/static/varys.css",
 		expectedStatus: http.StatusOK,
 	}, {
-		desc:           "GET /static/reader.js",
-		url:            "/static/reader.js",
+		desc:           "GET /static/varys.js",
+		url:            "/static/varys.js",
 		expectedStatus: http.StatusOK,
 	}, {
 		desc:           "GET /static/icon.svg",
