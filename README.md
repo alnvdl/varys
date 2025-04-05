@@ -1,14 +1,14 @@
 # alnvdl/varys
 
-Varys is a barebones RSS reader written in Go. It has (practically) no external
-dependencies and provides an equally barebones web experience. It is meant to
-be self-hosted and used by a single user.
+Varys is a barebones feed reader written in Go. It has (practically) no
+external dependencies and provides an equally barebones web experience. It is
+meant to be self-hosted and used by a single user.
 
 Varys is based on an in-memory feed list that can be configured to be persisted
 to the disk and auto-refreshed. It also serves this feed list over an HTTP API,
 and provides a static mobile-friendly SPA for reading feeds.
 
-Varys is named after the GoT character who was always up-to-date with his RSS
+Varys is named after the GoT character who was always up-to-date with his
 feeds, which he used to call "little birds".
 
 ## Running
@@ -39,8 +39,8 @@ This type of feed can be used with traditional RSS or Atom XML feeds.
   "name": "Example XML Feed",
   "url": "https://example.com/rss",
   "params": {
-   // max_items is the optional maximum number of items to keep in the feed.
-   // Defaults to a number between 100 and 200 based on the feed data.
+    // max_items is the optional maximum number of items to keep in the feed.
+    // Defaults to a number between 100 and 200 based on the feed data.
     "max_items": 50
   }
 }
@@ -115,11 +115,12 @@ The following environment variables can be used to configure Varys:
    This is optional, but it is somewhat pointless not to have one.
 - `PORT`: The port on which the server will run.
    Default is `8080`.
-- `PERSIST_INTERVAL`: The interval at which the feed list is persisted to disk.
+- `PERSIST_INTERVAL`: The interval for persisting the feed list to the disk.
    Default is `1m`.
-- `REFRESH_INTERVAL`: The interval at which the feeds are refreshed.
+- `REFRESH_INTERVAL`: The interval for refreshing the feeds.
    Default is `5m`.
-- `HEALTH_CHECK_INTERVAL`: The interval at which the server health is checked.
+- `HEALTH_CHECK_INTERVAL`: The interval for checking the health of the service.
+   Default is `1m`.
 Default is `3m`.
 
 ## API
@@ -330,7 +331,6 @@ Returns the status and version of the application.
    ```
 
 ### Authentication
-
 The login process is triggered via JavaScript: the page will detect the
 `#token:...` hash in the URL and call the `POST /login` endpoint with the
 token. That leads to a session cookie being set if the token is correct.
@@ -357,7 +357,7 @@ All error responses follow this format:
 
 ## Deploying in Azure App Service
 It is quite easy to deploy and run this application on the Azure App Service
-free tier, as long as you have a reasonable number of feeds (less than 100).
+free tier, as long as you have a reasonable number of feeds.
 
 1. Deploy the app in Azure following the
    [quick start guide](https://learn.microsoft.com/en-us/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-azure-portal).
@@ -378,14 +378,15 @@ free tier, as long as you have a reasonable number of feeds (less than 100).
 
    To generate secret random values, you can run `openssl rand 32 | base64`.
 
-3. While not being required, you may want to enable log persistence as well by
+3. While not required, you may want to enable log persistence as well by
    following this
    [guide](https://learn.microsoft.com/en-us/azure/app-service/troubleshoot-diagnostic-logs#enable-application-logging-linuxcontainer).
 
-4. You may need to restart the application to make sure it works well.
+4. You may need to restart the application after the initial setup to make
+   sure all settings are picked up.
 
 5. To deploy new versions of the image, just restart the application (assuming
-   the deployment is using the `:main` tag mentioned in step 1).
+   the deployment is using the `main` tag mentioned in step 1).
 
 ## Icons
 All icons in this project come from the Bootstrap project:
