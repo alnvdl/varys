@@ -236,15 +236,15 @@ func TestPersistence(t *testing.T) {
 	go l.Close()
 	select {
 	case <-time.After(1 * time.Second):
-		t.Fatalf("expected close persistence to be triggered")
+		t.Fatalf("expected persist-after-close to be triggered")
 	case err := <-persistNotify:
 		if err != nil {
-			t.Fatalf("expected no persistence error, got %v", err)
+			t.Fatalf("expected no persist-after-close error, got %v", err)
 		}
 	}
 }
 
-func TestNoPersistenceIfLoadFails(t *testing.T) {
+func TestPersistenceIfLoadFailsCorruptedJSON(t *testing.T) {
 	t.Parallel()
 
 	// Generate a random file name.
@@ -260,6 +260,52 @@ func TestNoPersistenceIfLoadFails(t *testing.T) {
 		t.Fatalf("expected no error writing to file, got %v", err)
 	}
 	file.Close()
+
+	persistNotify := make(chan error, 1)
+	l := mem.NewList(mem.ListParams{
+		DBFilePath:      dbFilePath,
+		PersistInterval: 500 * time.Millisecond,
+		PersistCallback: func(err error) {
+			persistNotify <- err
+		},
+	})
+
+	// Wait for a short period until persistence is triggered.
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatalf("expected persist to be triggered")
+	case err := <-persistNotify:
+		if err != nil {
+			t.Fatalf("expected no persist error, got %v", err)
+		}
+	}
+
+	// Close the list.
+	l.Close()
+}
+
+func TestNoPersistenceIfLoadFails(t *testing.T) {
+	t.Parallel()
+
+	// Generate a random file name.
+	dbFilePath := genRandomTestFileName()
+
+	// Write corrupted JSON content to the file.
+	file, err := os.Create(dbFilePath)
+	if err != nil {
+		t.Fatalf("expected no error creating file, got %v", err)
+	}
+	_, err = file.WriteString("{}")
+	if err != nil {
+		t.Fatalf("expected no error writing to file, got %v", err)
+	}
+	file.Close()
+
+	// Make file not readable by the user.
+	err = os.Chmod(dbFilePath, 0000)
+	if err != nil {
+		t.Fatalf("expected no error changing file permissions, got %v", err)
+	}
 
 	persistNotify := make(chan error, 1)
 	l := mem.NewList(mem.ListParams{

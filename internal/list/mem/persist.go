@@ -29,12 +29,13 @@ func (l *List) initPersist() {
 		} else {
 			defer inputFile.Close()
 			err = l.load(inputFile)
-			if err != nil && !errors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+				log.Error("error parsing input file caused by EOF, ignoring",
+					slog.String("err", err.Error()))
+				err = nil
+			} else if err != nil {
 				log.Error("error parsing input file",
 					slog.String("err", err.Error()))
-			}
-			if errors.Is(err, io.EOF) {
-				err = nil
 			}
 		}
 
