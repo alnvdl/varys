@@ -416,7 +416,10 @@ async function show_status_feeds() {
 
                 let name = document.createElement("div");
                 name.classList.add("feed-status-name");
-                name.textContent = status + " " + feed.name;
+                let a = document.createElement("a");
+                link(a, `/feeds/${feed.uid}`);
+                a.textContent = status + " " + feed.name;
+                name.appendChild(a);
                 feedDiv.appendChild(name);
 
                 let table = document.createElement("table");
