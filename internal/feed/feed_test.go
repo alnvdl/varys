@@ -402,6 +402,7 @@ func TestSummary(t *testing.T) {
 			ItemCount:   0,
 			ReadCount:   0,
 			LastUpdated: now,
+			LastItem:    0,
 		},
 	}, {
 		desc: "Feed with items and withItems = true",
@@ -432,6 +433,7 @@ func TestSummary(t *testing.T) {
 			ItemCount:   3,
 			ReadCount:   0,
 			LastUpdated: now,
+			LastItem:    now,
 		},
 	}, {
 		desc: "Feed with items and withItems = false",
@@ -456,6 +458,7 @@ func TestSummary(t *testing.T) {
 			ItemCount:   2,
 			ReadCount:   1,
 			LastUpdated: now,
+			LastItem:    now,
 		},
 	}, {
 		desc: "A virtual feed named 'virtual' with items and a valid itemMapper pointing at two other feeds",
@@ -488,6 +491,7 @@ func TestSummary(t *testing.T) {
 			ItemCount:   2,
 			ReadCount:   1,
 			LastUpdated: now,
+			LastItem:    now,
 		},
 	}}
 
@@ -517,7 +521,8 @@ func TestSummary(t *testing.T) {
 				summary.Name != test.expectedSummary.Name ||
 				summary.ItemCount != test.expectedSummary.ItemCount ||
 				summary.ReadCount != test.expectedSummary.ReadCount ||
-				summary.LastUpdated != test.expectedSummary.LastUpdated {
+				summary.LastUpdated != test.expectedSummary.LastUpdated ||
+				summary.LastItem != test.expectedSummary.LastItem {
 				t.Errorf("expected summary %#v, got %#v", test.expectedSummary, summary)
 			}
 

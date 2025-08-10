@@ -317,3 +317,34 @@ a {
     transition: all 0.05s linear;
     filter: var(--icon-clicked);
 }
+
+.feed-status {
+    display: block;
+    margin-top: 1.5rem;
+}
+
+.feed-status-block {
+    margin-bottom: 1.5rem;
+}
+
+.feed-status-name {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.feed-status-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.feed-status-table td:first-child {
+    font-weight: bold;
+    width: 25%;
+}
+
+.feed-status-table td {
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    border: none;
+    vertical-align: top;
+}

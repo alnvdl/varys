@@ -174,7 +174,16 @@ async function show_feeds(use_cache) {
 
                 li.appendChild(a);
                 feed_list.appendChild(li);
-            })
+            });
+
+            let li = document.createElement("li");
+            let a = document.createElement("a");
+            a.setAttribute("class", "feed-status")
+            a.appendChild(document.createTextNode("Status"));
+            link(a, "/feeds/status");
+            li.appendChild(a);
+            feed_list.appendChild(li);
+
             set_content(feed_list);
             break;
         default:
@@ -354,6 +363,8 @@ async function refresh(use_cache) {
 
     if (state.parts[0] === "feeds" && state.parts[2] === "items") {
         await show_item(state.parts[1], state.parts[3]);
+    } else if (state.parts[0] === "feeds" && state.parts[1] === "status") {
+        await show_status_feeds();
     } else if (state.parts[0] === "feeds") {
         if (state.parts[1]) {
             await show_feed(state.parts[1], use_cache);
@@ -362,6 +373,113 @@ async function refresh(use_cache) {
         }
     } else {
         error("Please login.");
+    }
+}
+
+async function show_status_feeds() {
+    let rsp, data;
+    set_loading();
+    try {
+        [rsp, data] = await feed_cache.fetch_feeds();
+    } catch (err) {
+        error(`Unexpected error fetching feed list: ${err}`);
+        return;
+    }
+
+    switch (rsp.status) {
+        case 401:
+            error("Please login.");
+            break;
+        case 500:
+            error(`Unexpected error: ${data.message}`);
+            break;
+        case 200:
+            reset_controls({breadcrumbs: true});
+            let container = document.createElement("div");
+            const THIRTY_DAYS = 30 * 24 * 60 * 60;
+            data.forEach(feed => {
+                if (feed.uid === "all") return; // Skip the 'all' feed
+                let feedDiv = document.createElement("div");
+                feedDiv.classList.add("feed-status-block");
+
+                let status = "";
+                if (feed.last_error && feed.last_error.trim() !== "") {
+                    status = "🔴";
+                } else if (feed.last_updated && (
+                    (now() - feed.last_item) > THIRTY_DAYS ||
+                    feed.item_count === 0) ||
+                    feed.last_item === 0) {
+                    status = "🟡";
+                } else {
+                    status = "🟢";
+                }
+
+                let name = document.createElement("div");
+                name.classList.add("feed-status-name");
+                name.textContent = status + " " + feed.name;
+                feedDiv.appendChild(name);
+
+                let table = document.createElement("table");
+                table.classList.add("feed-status-table");
+
+                let urlRow = document.createElement("tr");
+                let urlLabel = document.createElement("td");
+                urlLabel.textContent = "URL";
+                let urlValue = document.createElement("td");
+                urlValue.innerHTML = `<code>${feed.url || ""}</code>`;
+                urlRow.appendChild(urlLabel);
+                urlRow.appendChild(urlValue);
+                table.appendChild(urlRow);
+
+                let itemsRow = document.createElement("tr");
+                let itemsLabel = document.createElement("td");
+                itemsLabel.textContent = "Items";
+                let itemsValue = document.createElement("td");
+                itemsValue.textContent = `${feed.item_count} total, ${feed.item_count - feed.read_count} unread`;
+                itemsRow.appendChild(itemsLabel);
+                itemsRow.appendChild(itemsValue);
+                table.appendChild(itemsRow);
+
+                let updatedRow = document.createElement("tr");
+                let updatedLabel = document.createElement("td");
+                updatedLabel.textContent = "Last update";
+                let updatedValue = document.createElement("td");
+                updatedValue.textContent = feed.last_updated ? relative_time_desc(feed.last_updated) : "";
+                updatedRow.appendChild(updatedLabel);
+                updatedRow.appendChild(updatedValue);
+                table.appendChild(updatedRow);
+
+                if (feed.last_item) {
+                    let recentRow = document.createElement("tr");
+                    let recentLabel = document.createElement("td");
+                    recentLabel.textContent = "Last item";
+                    let recentValue = document.createElement("td");
+                    recentValue.textContent = relative_time_desc(feed.last_item);
+                    recentRow.appendChild(recentLabel);
+                    recentRow.appendChild(recentValue);
+                    table.appendChild(recentRow);
+                }
+
+                if (feed.last_error) {
+                    let errorRow = document.createElement("tr");
+                    let errorLabel = document.createElement("td");
+                    errorLabel.textContent = "Error";
+                    let errorValue = document.createElement("td");
+                    errorValue.textContent = feed.last_error ? feed.last_error : "none";
+                    errorRow.appendChild(errorLabel);
+                    errorRow.appendChild(errorValue);
+                    table.appendChild(errorRow);
+                }
+
+                feedDiv.appendChild(table);
+                container.appendChild(feedDiv);
+            });
+
+            set_content(container);
+            break;
+        default:
+            error(`Unexpected response code: ${rsp.status}`);
+            break;
     }
 }
 

@@ -71,6 +71,9 @@ type FeedSummary struct {
 
 	// ReadCount is the number of items in the feed that were marked as read.
 	ReadCount int `json:"read_count"`
+
+	// LastItem is the timestamp of the most recent item in the feed.
+	LastItem int64 `json:"last_item"`
 }
 
 func (f *Feed) UID() string {
@@ -210,9 +213,13 @@ func (f *Feed) MarkAllRead(before int64) {
 func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary {
 	items := f.SortedItems()
 	var readCount int
+	var lastItemTimestamp int64
 	for _, item := range items {
 		if item.Read {
 			readCount++
+		}
+		if lastItemTimestamp < item.Timestamp {
+			lastItemTimestamp = item.Timestamp
 		}
 	}
 
@@ -236,5 +243,6 @@ func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary
 		LastError:   f.LastRefreshError,
 		ItemCount:   len(items),
 		ReadCount:   readCount,
+		LastItem:    lastItemTimestamp,
 	}
 }
