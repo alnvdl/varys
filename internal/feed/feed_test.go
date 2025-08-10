@@ -618,6 +618,27 @@ func TestFeedRefresh(t *testing.T) {
 			},
 			LastRefreshedAt: now,
 		},
+	}, {
+		desc: "successful refresh clears previous error",
+		initialFeed: feed.Feed{
+			Name:             "Feed 1",
+			URL:              "url1",
+			Items:            map[string]*feed.Item{},
+			LastRefreshError: "previous error",
+		},
+		items: []feed.RawItem{
+			{URL: "url1", Title: "Title 1"},
+		},
+		fetchErr: nil,
+		expectedFeed: feed.Feed{
+			Name: "Feed 1",
+			URL:  "url1",
+			Items: map[string]*feed.Item{
+				feed.UID("url1"): {RawItem: feed.RawItem{URL: "url1", Title: "Title 1"}, FeedUID: feed.UID("url1"), Timestamp: now},
+			},
+			LastRefreshedAt:  now,
+			LastRefreshError: "",
+		},
 	}}
 
 	for _, test := range tests {

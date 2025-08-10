@@ -63,7 +63,8 @@ type FeedSummary struct {
 	// LastUpdated is the time when the feed was last fetched.
 	LastUpdated int64 `json:"last_updated"`
 
-	// LastError is the last error that occurred when refreshing the feed.
+	// LastError is the error that occurred when refreshing the feed in the
+	// last attempt.
 	LastError string `json:"last_error"`
 
 	// ItemCount is the number of items in the feed.
@@ -145,6 +146,8 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	if fetchErr != nil {
 		f.LastRefreshError = fetchErr.Error()
 		return
+	} else {
+		f.LastRefreshError = ""
 	}
 	if len(items) == 0 {
 		f.LastRefreshError = "no items found in the last refresh"

@@ -167,6 +167,7 @@ Returns a summary of all feeds.
          "read_count": 0,
          "last_updated": 1633024800,
          "last_error": "",
+         "last_item": 1633024800,
          "items": [ /* item summaries without contents */ ]
       }
    ]
@@ -198,6 +199,7 @@ Returns a summary of the specified feed.
       "read_count": 0,
       "last_updated": 1633024800,
       "last_error": "",
+      "last_item": 1633024800,
       "items": []
    }
    ```
