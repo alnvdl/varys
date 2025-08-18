@@ -546,23 +546,23 @@ function reset_controls(config) {
         let items = document.querySelector("#breadcrumb-items");
         items.textContent = "";
 
-        let li = document.createElement("li");
-        li.setAttribute("class", "breadcrumb-item");
+        let bitem = document.createElement("div");
+        bitem.setAttribute("class", "breadcrumb-item");
         a = document.createElement("a");
         link(a, "/feeds");
         a.appendChild(document.createTextNode("Feeds"));
-        li.appendChild(a);
-        items.appendChild(li);
+        bitem.appendChild(a);
+        items.appendChild(bitem);
 
         if (typeof config.breadcrumbs === 'object' && config.breadcrumbs !== null) {
-            li = document.createElement("li");
-            li.setAttribute("class", "breadcrumb-item");
+            bitem = document.createElement("li");
+            bitem.setAttribute("class", "breadcrumb-item");
             a = document.createElement("a");
             link(a, `/feeds/${config.breadcrumbs.uid}`);
             let name = config.breadcrumbs.name;
             a.appendChild(document.createTextNode(`${name}`));
-            li.appendChild(a);
-            items.appendChild(li);
+            bitem.appendChild(a);
+            items.appendChild(bitem);
         }
     }
 

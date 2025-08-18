@@ -28,7 +28,7 @@
 
 body {
     margin: 0;
-    font-family: Helvetica, sans-serif;
+    font-family: system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -115,6 +115,8 @@ a {
 .item-details {
     display: inline-block;
     font-size: 0.8em;
+    margin-top: 1px;
+    vertical-align: top;
 }
 
 .item-content {
@@ -163,11 +165,6 @@ a {
     margin-top: calc(var(--controls-height) + 16px);
 }
 
-#breadcrumb-items {
-    /* Makes it look better in small screens */
-    margin-top: 2px;
-}
-
 .breadcrumb-item {
     font-size: calc(1.2 * var(--font-size));
 }
@@ -181,11 +178,12 @@ a {
 }
 
 #action-area {
+    align-items: center;
     display: flex;
     justify-content: flex-end;
-    align-items: center;
-    width: 20%;
     max-width: 20%;
+    padding: 1px;
+    width: 20%;
 }
 
 #action-area > a + a {
