@@ -106,7 +106,16 @@ func NewHandler(p *HandlerParams) *handler {
 		if e.authn {
 			handler = h.requireAuthentication(handler)
 		}
-		h.HandleFunc(e.method+" "+e.path, logpanics(log(addCSPPolicyHeader(handler))))
+
+		for _, middleware := range []func(http.HandlerFunc) http.HandlerFunc{
+			verifyCSRFHeaders,
+			addCSPPolicyHeader,
+			log,
+			logpanics,
+		} {
+			handler = middleware(handler)
+		}
+		h.HandleFunc(e.method+" "+e.path, handler)
 	}
 
 	return h

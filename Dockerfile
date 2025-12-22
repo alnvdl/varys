@@ -1,10 +1,10 @@
-FROM golang:1.24-bookworm AS build
+FROM golang:1.25-trixie AS build
 
 COPY . /varys
 WORKDIR /varys
 RUN go build -o ./varys ./cmd/varys/main.go
 
-FROM ubuntu:jammy AS final
+FROM ubuntu:noble AS final
 
 ENV DEBIAN_FRONTEND=noninteractive
 

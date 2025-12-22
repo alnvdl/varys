@@ -438,14 +438,18 @@ func TestGetItem(t *testing.T) {
 
 func TestMarkAsRead(t *testing.T) {
 	tests := []struct {
-		desc           string
-		feeds          []*feed.FeedSummary
-		fuid           string
-		iuid           string
-		before         int64
-		token          string
+		desc string
+
+		feeds              []*feed.FeedSummary
+		fuid               string
+		iuid               string
+		before             int64
+		token              string
+		originHeader       string
+		secFetchSiteHeader string
+		authSuccess        bool
+
 		expectedStatus int
-		authSuccess    bool
 		expectedItems  []*feed.ItemSummary
 	}{{
 		desc:           "success: item marked as read",
@@ -477,6 +481,28 @@ func TestMarkAsRead(t *testing.T) {
 		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}}}},
 		expectedStatus: http.StatusUnauthorized,
 		expectedItems:  []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: false}},
+	}, {
+		desc:           "failure: cross-origin request blocked by Origin header",
+		token:          "valid-token",
+		authSuccess:    true,
+		fuid:           "1",
+		iuid:           "1",
+		before:         timeutil.Now(),
+		feeds:          []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}}}},
+		expectedStatus: http.StatusForbidden,
+		expectedItems:  []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: false}},
+		originHeader:   "https://example.com",
+	}, {
+		desc:               "failure: cross-origin feed read blocked by Sec-Fetch-Site header",
+		token:              "valid-token",
+		authSuccess:        true,
+		fuid:               "1",
+		iuid:               "",
+		before:             timeutil.Now(),
+		feeds:              []*feed.FeedSummary{{UID: "1", Name: "Feed 1", Items: []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now()}, {UID: "2", Title: "Item 2", Timestamp: timeutil.Now()}}}},
+		expectedStatus:     http.StatusForbidden,
+		expectedItems:      []*feed.ItemSummary{{UID: "1", Title: "Item 1", Timestamp: timeutil.Now(), Read: false}, {UID: "2", Title: "Item 2", Timestamp: timeutil.Now(), Read: false}},
+		secFetchSiteHeader: "cross-site",
 	}, {
 		desc:        "success: some feed items marked as read",
 		token:       "valid-token",
@@ -517,6 +543,12 @@ func TestMarkAsRead(t *testing.T) {
 			req, _ := http.NewRequest("POST", reqURL, bytes.NewBufferString(fmt.Sprintf(`{"before": %d}`, test.before)))
 			if cookie != nil {
 				req.AddCookie(cookie)
+			}
+			if test.originHeader != "" {
+				req.Header.Set("Origin", test.originHeader)
+			}
+			if test.secFetchSiteHeader != "" {
+				req.Header.Set("Sec-Fetch-Site", test.secFetchSiteHeader)
 			}
 			rr := httptest.NewRecorder()
 
