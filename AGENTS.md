@@ -1,7 +1,9 @@
-# These are just suggested instructions for this project.
-# To use them, rename this file to `copilot-instructions.md` and remove this
-# comment, or copy the instructions below into your workspace instructions.
+# varys AGENTS.md
 
+Varys is a barebones feed reader written in Go. You can obtain further
+information from README.md, including instructions on running and testing.
+
+# Coding
 Never introduce new external dependencies, unless explicitly told to do so.
 
 You are free to use anything from the standard library of any language.
