@@ -86,7 +86,7 @@ func extractCandidateItem(anchor *html.Node, baseURL *url.URL, allowedPrefixes [
 					imgNode := &html.Node{
 						Type: html.ElementNode,
 						Data: "img",
-						Attr: []html.Attribute{{Key: "src", Val: imgSrc.String()}},
+						Attr: []html.Attribute{{Key: "src", Val: urlToString(imgSrc)}},
 					}
 					var buf bytes.Buffer
 					html.Render(&buf, imgNode)

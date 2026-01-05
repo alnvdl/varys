@@ -159,6 +159,25 @@ func TestParseHTML(t *testing.T) {
 			Title:   "Unknown title",
 			Content: "",
 		}},
+	}, {
+		desc: "success: img tag with invalid src URL should not crash",
+		html: `<html><body>
+			<div class="target-container">
+				<a href="/url1">Title<img src=":invalid" /></a>
+			</div>
+		</body></html>`,
+		params: map[string]any{
+			"container_tag":    "div",
+			"container_attrs":  map[string]string{"class": "target-container"},
+			"title_pos":        0,
+			"base_url":         "https://example.com",
+			"allowed_prefixes": []string{"https://example.com"},
+		},
+		expected: []feed.RawItem{{
+			URL:     "https://example.com/url1",
+			Title:   "Title",
+			Content: `Title<br/><img src=""/>`,
+		}},
 	}}
 
 	for _, test := range tests {
