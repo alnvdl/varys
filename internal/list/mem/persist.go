@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -69,26 +70,17 @@ func (l *List) persist(reason string) {
 		slog.String("dbFilePath", l.dbFilePath),
 		slog.Duration("persistInterval", l.persistInterval),
 	)
-	outputFile, err := os.OpenFile(l.dbFilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
+	err := writeFileAtomic(l.dbFilePath, l.save, 0600)
 	if err != nil {
-		log.Error("cannot open feed list file for writing",
-			slog.String("err", err.Error()),
-		)
-		if l.persistCallback != nil {
-			l.persistCallback(err)
-		}
-		return
-	}
-	if err := l.save(outputFile); err != nil {
 		log.Error("cannot persist feed list to file",
 			slog.String("err", err.Error()),
 		)
+	} else {
+		log.Info("persisted feed list to file")
 	}
-	errClose := outputFile.Close()
 	if l.persistCallback != nil {
-		l.persistCallback(errors.Join(err, errClose))
+		l.persistCallback(err)
 	}
-	log.Info("persisted feed list to file")
 }
 
 // autoPersist periodically saves the feed list to the file. The interval is
@@ -163,4 +155,35 @@ func (l *List) load(r io.Reader) error {
 	l.feeds = data.Feeds
 
 	return nil
+}
+
+func writeFileAtomic(filePath string, writeFn func(w io.Writer) error, perm os.FileMode) (err error) {
+	if fi, err := os.Stat(filePath); err == nil && !fi.Mode().IsRegular() {
+		return fmt.Errorf("cannot write to %s: not a regular file", filePath)
+	}
+	tmpFile, err := os.CreateTemp(filepath.Dir(filePath), filepath.Base(filePath)+".tmp")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if tmpFile != nil {
+			tmpFile.Close()
+		}
+		if err != nil {
+			os.Remove(tmpFile.Name())
+		}
+	}()
+	if err := writeFn(tmpFile); err != nil {
+		return err
+	}
+	if err := tmpFile.Chmod(perm); err != nil {
+		return err
+	}
+	if err := tmpFile.Sync(); err != nil {
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpFile.Name(), filePath)
 }

@@ -23,6 +23,8 @@ var tests = []struct {
 }}
 ```
 
+Prefer table tests, unless instructed otherwise.
+
 Use the `test` variable when iterating over subtests in a Go table test.
 
 The description for each Go subtest should be named `desc` and it should always start with a number or lowercase letter.

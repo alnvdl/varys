@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -326,4 +329,126 @@ func TestNoPersistenceIfLoadFails(t *testing.T) {
 
 	// Close the list.
 	l.Close()
+}
+
+func TestWriteFileAtomic(t *testing.T) {
+	t.Parallel()
+
+	var tests = []struct {
+		desc string
+
+		setup   func(t *testing.T, filePath string) string
+		writeFn func(w io.Writer) error
+		cleanup func(t *testing.T, filePath string)
+
+		expectErr  string
+		expectData string
+	}{{
+		desc: "writing to a non-existing regular file creates it",
+		setup: func(t *testing.T, filePath string) string {
+			// Ensure the file does not exist.
+			os.Remove(filePath)
+			return filePath
+		},
+		writeFn: func(w io.Writer) error {
+			_, err := w.Write([]byte("test content"))
+			return err
+		},
+		cleanup:    func(t *testing.T, filePath string) {},
+		expectData: "test content",
+	}, {
+		desc: "writing to an existing regular file replaces it",
+		setup: func(t *testing.T, filePath string) string {
+			// Create the file with initial content.
+			err := os.WriteFile(filePath, []byte("old content"), 0600)
+			if err != nil {
+				t.Fatalf("expected no error creating test file, got %v", err)
+			}
+			return filePath
+		},
+		writeFn: func(w io.Writer) error {
+			_, err := w.Write([]byte("new content"))
+			return err
+		},
+		cleanup:    func(t *testing.T, filePath string) {},
+		expectData: "new content",
+	}, {
+		desc: "writing to a socket file fails",
+		setup: func(t *testing.T, filePath string) string {
+			// Create a Unix socket file and keep the listener open.
+			listener, err := net.Listen("unix", filePath)
+			if err != nil {
+				t.Fatalf("expected no error creating socket, got %v", err)
+			}
+			// Store listener pointer in the test for cleanup.
+			t.Cleanup(func() { listener.Close() })
+			return filePath
+		},
+		cleanup:   func(t *testing.T, filePath string) { os.Remove(filePath) },
+		expectErr: "not a regular file",
+		// Skip data check as file is not regular.
+	}, {
+		desc: "writing to a regular file in case of write failure",
+		setup: func(t *testing.T, filePath string) string {
+			// Create the file with initial content.
+			err := os.WriteFile(filePath, []byte("old content"), 0600)
+			if err != nil {
+				t.Fatalf("expected no error creating test file, got %v", err)
+			}
+			return filePath
+		},
+		writeFn: func(w io.Writer) error {
+			return errors.New("simulated write failure")
+		},
+		cleanup:    func(t *testing.T, filePath string) {},
+		expectErr:  "simulated write failure",
+		expectData: "old content", // Content is unchanged.
+	}}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			filePath := genRandomTestFileName()
+			defer func() {
+				os.Remove(filePath)
+				test.cleanup(t, filePath)
+			}()
+			filePath = test.setup(t, filePath)
+
+			err := mem.WriteFileAtomic(filePath, test.writeFn, 0600)
+			if test.expectErr == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+			} else {
+				if !strings.Contains(err.Error(), test.expectErr) {
+					t.Fatalf("expected error to contain %q, got %q", test.expectErr, err.Error())
+				}
+			}
+
+			if test.expectData != "" {
+				data, err := os.ReadFile(filePath)
+				if err != nil {
+					t.Fatalf("expected no error reading file, got %v", err)
+				}
+				if string(data) != test.expectData {
+					t.Fatalf("expected file content to be %q, got %q", test.expectData, string(data))
+				}
+			}
+
+			// Check that no temporary file is left behind.
+			parentDir := filepath.Dir(filePath)
+			baseName := filepath.Base(filePath)
+			entries, err := os.ReadDir(parentDir)
+			if err != nil {
+				t.Fatalf("expected no error reading directory, got %v", err)
+			}
+			for _, entry := range entries {
+				if entry.Name() == baseName+".tmp" {
+					t.Fatalf("expected no temporary file left behind, but found %s", entry.Name())
+				}
+			}
+		})
+	}
 }
