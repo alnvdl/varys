@@ -12,7 +12,7 @@ import (
 // indicates whether this refresh was triggered automatically or manually.
 func (l *List) Refresh(auto bool) {
 	if !auto {
-		defer l.delayPersist()
+		defer l.delayAutoSave()
 	}
 	l.muFeeds.Lock()
 	defer l.muFeeds.Unlock()

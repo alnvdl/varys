@@ -12,7 +12,4 @@ func FeedsMap(l *List) map[string]*feed.Feed {
 	return l.feeds
 }
 
-var Save = (*List).save
-var Load = (*List).load
 var AllFeed = allFeed
-var WriteFileAtomic = writeFileAtomic

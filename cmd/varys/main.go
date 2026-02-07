@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alnvdl/autosave"
+
 	"github.com/alnvdl/varys/internal/list"
 	"github.com/alnvdl/varys/internal/list/mem"
 	"github.com/alnvdl/varys/internal/web"
@@ -119,12 +121,19 @@ func serverHealthCheck(interval time.Duration, port string, close chan bool) {
 }
 
 func main() {
-	feedList := mem.NewList(mem.ListParams{
+	feedList, err := mem.NewList(mem.ListParams{
 		InitialFeeds:    feeds(),
-		DBFilePath:      dbPath(),
-		PersistInterval: persistInterval(),
 		RefreshInterval: refreshInterval(),
+		AutoSaveParams: autosave.Params{
+			FilePath: dbPath(),
+			Interval: persistInterval(),
+			Logger:   slog.Default(),
+		},
 	})
+	if err != nil {
+		slog.Error("failed to initialize feed list", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	handler := web.NewHandler(&web.HandlerParams{
 		FeedList:    feedList,

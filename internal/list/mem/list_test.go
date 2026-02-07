@@ -1,6 +1,9 @@
 package mem_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"testing"
@@ -153,7 +156,10 @@ func TestListSummary(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{})
+			l, err := mem.NewList(mem.ListParams{})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			mem.SetFeedsMap(l, test.feeds)
 			got := l.Summary()
 			if len(got) != len(test.want) {
@@ -258,7 +264,10 @@ func TestListFeedSummary(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{})
+			l, err := mem.NewList(mem.ListParams{})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			mem.SetFeedsMap(l, test.feeds)
 			got := l.FeedSummary(test.uid)
 			if got == nil && test.want != nil {
@@ -340,7 +349,10 @@ func TestListFeedItem(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{})
+			l, err := mem.NewList(mem.ListParams{})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			mem.SetFeedsMap(l, test.feeds)
 			got := l.FeedItem(test.fuid, test.iuid)
 			if got == nil && test.want != nil {
@@ -773,7 +785,10 @@ func TestListMarkRead(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{})
+			l, err := mem.NewList(mem.ListParams{})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			mem.SetFeedsMap(l, test.feeds)
 			result := l.MarkRead(test.fuid, test.iuid, test.before)
 			if result != test.expectedResult {
@@ -839,7 +854,10 @@ func TestListLoadFeeds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{})
+			l, err := mem.NewList(mem.ListParams{})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			mem.SetFeedsMap(l, test.initialFeeds)
 			l.LoadFeeds(test.inputFeeds)
 			actualFeeds := mem.FeedsMap(l)
@@ -854,5 +872,180 @@ func TestListLoadFeeds(t *testing.T) {
 				checkFeed(t, *actualFeed, *expectedFeed)
 			}
 		})
+	}
+}
+
+func TestListSave(t *testing.T) {
+	t.Parallel()
+	feeds := map[string]*feed.Feed{
+		"feed1": {
+			Name: "Feed 1",
+			Type: "xml",
+			URL:  "http://example.com/feed1",
+			Items: map[string]*feed.Item{
+				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
+			},
+		},
+		"feed2": {
+			Name: "Feed 2",
+			Type: "xml",
+			URL:  "http://example.com/feed2",
+			Items: map[string]*feed.Item{
+				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
+			},
+		},
+	}
+
+	// Save the l to a buffer in JSON.
+	l, err := mem.NewList(mem.ListParams{})
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	mem.SetFeedsMap(l, feeds)
+	var buf bytes.Buffer
+	err = l.Save(&buf)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Load the list from the buffer.
+	var data mem.SerializedList
+	err = json.Unmarshal(buf.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(data.Feeds) != len(feeds) {
+		t.Fatalf("expected %d feeds, got %d", len(feeds), len(data.Feeds))
+	}
+	for key, f := range feeds {
+		savedFeed, ok := data.Feeds[key]
+		if !ok {
+			t.Fatalf("expected feed %s to be present", key)
+		}
+		checkFeed(t, *savedFeed, *f)
+	}
+}
+
+type errorWriter struct{}
+
+func (ew *errorWriter) Write(p []byte) (n int, err error) {
+	return 0, errors.New("simulated write error")
+}
+
+func TestListSaveError(t *testing.T) {
+	t.Parallel()
+	l, err := mem.NewList(mem.ListParams{})
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	mem.SetFeedsMap(l, make(map[string]*feed.Feed))
+
+	err = l.Save(&errorWriter{})
+	if err == nil {
+		t.Fatalf("expected an error, got nil")
+	}
+
+	expectedErr := "cannot serialize feed list: simulated write error"
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err.Error())
+	}
+}
+
+func TestListLoad(t *testing.T) {
+	t.Parallel()
+	feeds := map[string]*feed.Feed{
+		"feed1": {
+			Name: "Feed 1",
+			Type: "xml",
+			URL:  "http://example.com/feed1",
+			Items: map[string]*feed.Item{
+				"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}},
+			},
+		},
+		"feed2": {
+			Name: "Feed 2",
+			Type: "xml",
+			URL:  "http://example.com/feed2",
+			Items: map[string]*feed.Item{
+				"item2": {RawItem: feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"}},
+			},
+		},
+	}
+
+	// Serialize the feeds to JSON.
+	var buf bytes.Buffer
+	var data mem.SerializedList
+	data.Feeds = feeds
+	err := json.NewEncoder(&buf).Encode(&data)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Load the feeds from the JSON.
+	l, err := mem.NewList(mem.ListParams{})
+	if err != nil {
+		t.Fatalf("failed to create loaded list: %v", err)
+	}
+	err = l.Load(&buf)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	loadedFeeds := mem.FeedsMap(l)
+	if len(loadedFeeds) != len(feeds) {
+		t.Fatalf("expected %d feeds, got %d", len(feeds), len(loadedFeeds))
+	}
+
+	for key, f := range feeds {
+		loadedFeed, ok := loadedFeeds[key]
+		if !ok {
+			t.Fatalf("expected feed %s to be present", key)
+		}
+		checkFeed(t, *loadedFeed, *f)
+	}
+}
+
+func TestListLoadCorrupted(t *testing.T) {
+	t.Parallel()
+	corruptedJSON := `{"feeds": {"feed1":`
+
+	l, err := mem.NewList(mem.ListParams{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// On a corrupted file (usually ErrUnexpectedEOF), we expect Load to return
+	// nil error and an empty feeds map.
+	err = l.Load(bytes.NewBufferString(corruptedJSON))
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(mem.FeedsMap(l)) != 0 {
+		t.Fatalf("expected empty feeds map, got %v", mem.FeedsMap(l))
+	}
+}
+
+type errorReader struct{}
+
+func (er *errorReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("simulated read error")
+}
+
+func TestListLoadReadError(t *testing.T) {
+	t.Parallel()
+	l, err := mem.NewList(mem.ListParams{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// On a read error (other than EOF or ErrUnexpectedEOF), we expect Load to
+	// return an error that wraps the original read error.
+	err = l.Load(&errorReader{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	expectedMsg := "cannot deserialize feed list: simulated read error"
+	if err.Error() != expectedMsg {
+		t.Fatalf("expected error %q, got %q", expectedMsg, err.Error())
 	}
 }

@@ -132,10 +132,13 @@ func TestListRefresh(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			l := mem.NewList(mem.ListParams{
+			l, err := mem.NewList(mem.ListParams{
 				Fetcher:      mockFetcher,
 				InitialFeeds: test.initialFeeds,
 			})
+			if err != nil {
+				t.Fatalf("failed to create list: %v", err)
+			}
 			l.Refresh(false)
 			for key, expectedFeed := range test.expectedFeeds {
 				actualFeed, ok := mem.FeedsMap(l)[key]
@@ -173,7 +176,7 @@ func TestAutoRefresh(t *testing.T) {
 	}
 
 	refreshNotify := make(chan bool, 1)
-	l := mem.NewList(mem.ListParams{
+	l, err := mem.NewList(mem.ListParams{
 		InitialFeeds: []*list.InputFeed{{
 			Name: "Feed 1",
 			URL:  "http://example.com/feed1",
@@ -189,6 +192,10 @@ func TestAutoRefresh(t *testing.T) {
 			refreshNotify <- true
 		},
 	})
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
 	select {
 	case <-time.After(2 * time.Second):
 		t.Fatalf("expected refresh to be triggered")
