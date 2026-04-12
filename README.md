@@ -119,8 +119,6 @@ The following environment variables can be used to configure Varys:
    Default is `1m`.
 - `REFRESH_INTERVAL`: The interval for refreshing the feeds.
    Default is `5m`.
-- `HEALTH_CHECK_INTERVAL`: The interval for checking the health of the service.
-   Default is `3m`.
 
 ## API
 
