@@ -1,8 +1,5 @@
 const TOKEN_PREFIX = "token:";
 const HOME_PATH = "/feeds/all";
-// REFRESH_TIMEOUT is the amount of time in seconds after which cache entries
-// should expire and the page should reload when focused.
-const REFRESH_TIMEOUT = 60 * 60; // 1 hour
 
 function get_current_state() {
     let url = window.location.pathname;
@@ -24,106 +21,59 @@ function get_current_state() {
     }
 }
 
-const CACHE_LIST = "list"
-const CACHE_FEED = "feed"
-const CACHE_ITEM = "item"
+async function fetch_json(url) {
+    let rsp = await fetch(url);
+    let data = await rsp.json();
+    return [rsp, data];
+}
 
-// FeedStore is a simple in-memory cache for feed data that reaches out to the
-// backend when data is not available or has expired.
-class FeedStore {
-    constructor() {
-        this.entries = {};
-    }
+async function fetch_feeds() {
+    return fetch_json("/api/feeds");
+}
 
-    _put(key, data) {
-        this.entries[key] = {
-            ts: new Date(),
-            data,
-        };
-    }
+async function fetch_feed(uid) {
+    return fetch_json(`/api/feeds/${uid}`);
+}
 
-    _get(key) {
-        let entry = this.entries[key];
-        if (!entry) return entry;
-        if (seconds_ago(entry.timestamp) >= REFRESH_TIMEOUT) {
-            delete this.entries[key];
-            return undefined;
-        }
-        return entry.data;
-    }
+async function fetch_item(fuid, iuid) {
+    return fetch_json(`/api/feeds/${fuid}/items/${iuid}`);
+}
 
-    _mark_as_read_items_matching(cond) {
-        Object.values(this.entries).forEach(entry => {
-            entry.data.items?.forEach(item => {
-                if (cond(item)) {
-                    item.read = 1;
-                    let feed = this._get(item.feed_uid);
-                    if (feed) feed.read_count += 1;
-                }
-            });
-        });
-    }
+async function login(token) {
+    return fetch("/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({token})
+    });
+}
 
-    async _fetch(uid, url, use_cache) {
-        let cached = this._get(uid);
-        if (use_cache && cached) {
-            return [{status: 200}, cached];
-        }
-        let rsp = await fetch(url);
-        let data = await rsp.json();
-        if (rsp.status === 200) {
-            this._put(uid, data);
-        }
-        return [rsp, data];
-    }
+async function mark_feed_as_read(fuid, before) {
+    let rsp = await fetch(`/api/feeds/${fuid}/read`, {
+        method: "POST",
+        body: JSON.stringify({before}),
+        headers: {"Content-Type": "application/json"},
+    });
+    return rsp.status === 200;
+}
 
-    async mark_as_read(what, fuid, iuid) {
-        if (what == CACHE_LIST) {
-            what = CACHE_FEED;
-            fuid = "all";
-        }
+async function mark_item_as_read(fuid, iuid) {
+    let rsp = await fetch(`/api/feeds/${fuid}/items/${iuid}/read`, {method: "POST"});
+    return rsp.status === 200;
+}
 
-        if (what == CACHE_FEED) {
-            let before = this.entries[fuid]?.data?.last_updated || now();
-            let rsp = await fetch(`/api/feeds/${fuid}/read`, {
-                method: "POST",
-                body: JSON.stringify({before}),
-                headers: {"Content-Type": "application/json"},
-            });
-            if (rsp.status !== 200) {
-                return false;
-            }
-            this._mark_as_read_items_matching(item => fuid === "all" || item.feed_uid === fuid)
-        }
+async function mark_feed_as_read_and_refresh(fuid, before) {
+    set_loading();
+    await mark_feed_as_read(fuid, before);
+    refresh();
+}
 
-        if (what == CACHE_ITEM) {
-            let rsp = await fetch(`/api/feeds/${fuid}/items/${iuid}/read`, {method: "POST"});
-            if (rsp.status !== 200) {
-                return false;
-            }
-            this._mark_as_read_items_matching(item => item.uid === iuid)
-        }
-
-        return true;
-    }
-
-    async fetch_feed(uid, use_cache) {
-        return this._fetch(uid, `/api/feeds/${uid}`, use_cache);
-    }
-
-    async fetch_feeds() {
-        // Due to multiple bugs (cache invalidation is hard...), caching was
-        // disabled for the feed list.
-        return this._fetch("feeds", `/api/feeds`, false);
-    }
+async function mark_all_feeds_as_read_and_refresh(feed) {
+    set_loading();
+    await mark_feed_as_read(feed.uid, feed.last_updated);
+    refresh();
 }
 
 // Page state.
-var previous_hash = window.location.hash;
-var current_hash = window.location.hash;
-var feed_cache = new FeedStore();
-var last_refresh = new Date();
-
 function error(err) {
     console.trace(err);
     let div = document.createElement("div");
@@ -133,12 +83,12 @@ function error(err) {
     reset_controls({breadcrumbs: true});
 }
 
-async function show_feeds(use_cache) {
+async function show_feeds() {
     let rsp, data;
     try {
         reset_controls({breadcrumbs: true, read_button: true});
         set_loading();
-        [rsp, data] = await feed_cache.fetch_feeds(use_cache);
+        [rsp, data] = await fetch_feeds();
     } catch (err) {
         error(`Unexpected error fetching feed list: ${err}`);
         return;
@@ -152,7 +102,11 @@ async function show_feeds(use_cache) {
             error(`Unexpected error: ${data.message}`);
             break;
         case 200:
-            reset_controls({breadcrumbs: true, read_button: true});
+            let all_feed = data.find(feed => feed.uid === "all");
+            reset_controls({
+                breadcrumbs: true,
+                read_button: () => mark_all_feeds_as_read_and_refresh(all_feed),
+            });
             let feed_list = document.createElement("ol");
             feed_list.setAttribute("class", "feed-list")
             data.forEach(feed => {
@@ -192,12 +146,12 @@ async function show_feeds(use_cache) {
     }
 }
 
-async function show_feed(uid, use_cache) {
+async function show_feed(uid) {
     let rsp, data;
     try {
         reset_controls({breadcrumbs: true, read_button: true});
         set_loading();
-        [rsp, data] = await feed_cache.fetch_feed(uid, use_cache);
+        [rsp, data] = await fetch_feed(uid);
     } catch (err) {
         error(`Unexpected error fetching feed: ${err}`);
         return;
@@ -214,7 +168,10 @@ async function show_feed(uid, use_cache) {
             error(`Unexpected error: ${data.message}`);
             break;
         case 200:
-            reset_controls({breadcrumbs: {uid: data.uid, name: data.name}, read_button: true});
+            reset_controls({
+                breadcrumbs: {uid: data.uid, name: data.name},
+                read_button: () => mark_feed_as_read_and_refresh(data.uid, data.last_updated),
+            });
             let item_list = document.createElement("div");
             item_list.classList = "item-list";
             data.items?.forEach(item => {
@@ -233,8 +190,7 @@ async function show_item(fuid, iuid) {
 
     try {
         set_loading();
-        rsp = await fetch(`/api/feeds/${fuid}/items/${iuid}`);
-        data = await rsp.json();
+        [rsp, data] = await fetch_item(fuid, iuid);
     } catch (err) {
         error(`Unexpected error fetching item: ${err}`);
         return;
@@ -258,24 +214,13 @@ async function show_item(fuid, iuid) {
             set_content(gen_item(data));
             window.scrollTo(0, 0);
             if (!data.read) {
-                feed_cache.mark_as_read(CACHE_ITEM, data.feed_uid, data.uid);
+                mark_item_as_read(data.feed_uid, data.uid);
             }
             break;
         default:
             error(`Unexpected response code: ${rsp.status}`);
             break;
     }
-}
-
-async function mark_all_as_read() {
-    set_loading();
-    let state = get_current_state();
-    if (state.parts.length == 1 && state.parts[0] == "feeds") {
-        await feed_cache.mark_as_read(CACHE_LIST);
-    } else if (state.parts.length == 2 && state.parts[0] == "feeds") {
-        await feed_cache.mark_as_read(CACHE_FEED, state.parts[1]);
-    }
-    refresh();
 }
 
 function gen_item(item, opts) {
@@ -344,14 +289,10 @@ function gen_item(item, opts) {
     return itemDiv;
 }
 
-async function refresh(use_cache) {
+async function refresh() {
     let state = get_current_state();
     if (state.login) {
-        let rsp = await fetch(`/login`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({token: state.token})
-        });
+        let rsp = await login(state.token);
         if (rsp.status === 200) {
             history.replaceState(null, "", HOME_PATH);
             refresh();
@@ -367,9 +308,9 @@ async function refresh(use_cache) {
         await show_status_feeds();
     } else if (state.parts[0] === "feeds") {
         if (state.parts[1]) {
-            await show_feed(state.parts[1], use_cache);
+            await show_feed(state.parts[1]);
         } else {
-            await show_feeds(use_cache);
+            await show_feeds();
         }
     } else {
         error("Please login.");
@@ -380,7 +321,7 @@ async function show_status_feeds() {
     let rsp, data;
     set_loading();
     try {
-        [rsp, data] = await feed_cache.fetch_feeds();
+        [rsp, data] = await fetch_feeds();
     } catch (err) {
         error(`Unexpected error fetching feed list: ${err}`);
         return;
@@ -486,8 +427,6 @@ async function show_status_feeds() {
     }
 }
 
-let refresh_using_cache = () => {refresh(true)};
-
 function set_content(...content) {
     let elem = document.querySelector("#content");
     while (elem.firstChild) {
@@ -525,7 +464,7 @@ function link(a, url) {
     if (a.onclick) return;
     a.onclick = e => {
         history.pushState(null, "", a.href);
-        refresh_using_cache();
+        refresh();
         e.preventDefault();
     };
 }
@@ -568,8 +507,12 @@ function reset_controls(config) {
 
     let read_button = document.querySelector(`#read-button`);
     read_button.classList.add("hidden");
+    read_button.onclick = null;
     if (config.read_button) {
         read_button.classList.remove("hidden");
+        if (typeof config.read_button === "function") {
+            read_button.onclick = config.read_button;
+        }
     }
 
     let open_button = document.querySelector(`#open-button`);
@@ -588,11 +531,10 @@ function start() {
     refresh();
 };
 
-window.onpopstate = refresh_using_cache;
+window.onpopstate = refresh;
 
 window.onload = () => {
     let read_button = document.querySelector("#read-button");
-    read_button.addEventListener("click", mark_all_as_read);
     read_button.addEventListener("touchstart", () => { });
 
     let open_button = document.querySelector("#open-button");
