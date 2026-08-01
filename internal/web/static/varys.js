@@ -73,13 +73,27 @@ async function mark_all_feeds_as_read_and_refresh(feed) {
     refresh();
 }
 
+function create_element(tag, {class_name, text, children = []} = {}) {
+    let element = document.createElement(tag);
+    if (class_name) element.className = class_name;
+    if (text !== undefined) element.textContent = text;
+    element.append(...children);
+    return element;
+}
+
+function table_row(label, value) {
+    return create_element("tr", {
+        children: [
+            create_element("td", {text: label}),
+            create_element("td", {children: [value]}),
+        ],
+    });
+}
+
 // Page state.
 function error(err) {
     console.trace(err);
-    let div = document.createElement("div");
-    div.setAttribute("class", "error");
-    div.appendChild(document.createTextNode(err));
-    set_content(div);
+    set_content(create_element("div", {class_name: "error", text: err}));
     reset_controls({breadcrumbs: true});
 }
 
@@ -107,37 +121,36 @@ async function show_feeds() {
                 breadcrumbs: true,
                 read_button: () => mark_all_feeds_as_read_and_refresh(all_feed),
             });
-            let feed_list = document.createElement("ol");
-            feed_list.setAttribute("class", "feed-list")
+            let feed_list = create_element("ol", {class_name: "feed-list"});
+            let feed_fragment = document.createDocumentFragment();
             data.forEach(feed => {
-                let li = document.createElement("li");
-
-                let a = document.createElement("a");
-                a.appendChild(document.createTextNode(feed.name));
+                let a = create_element("a", {text: feed.name});
                 link(a, `/feeds/${feed.uid}`);
 
                 let unread = feed.item_count - feed.read_count;
                 if (unread) {
-                    let span = document.createElement("span");
-                    span.setAttribute("class", "feed-unread-count")
-                    span.appendChild(document.createTextNode(unread));
-                    a.appendChild(span);
-                } else {
-                    li.setAttribute("class", "feed-read")
+                    a.append(create_element("span", {
+                        class_name: "feed-unread-count",
+                        text: unread,
+                    }));
                 }
 
-                li.appendChild(a);
-                feed_list.appendChild(li);
+                feed_fragment.append(create_element("li", {
+                    class_name: unread ? "" : "feed-read",
+                    children: [a],
+                }));
             });
 
-            let li = document.createElement("li");
-            let a = document.createElement("a");
-            a.setAttribute("class", "feed-status")
-            a.appendChild(document.createTextNode("Status"));
-            link(a, "/feeds/status");
-            li.appendChild(a);
-            feed_list.appendChild(li);
+            let status_link = create_element("a", {
+                class_name: "feed-status",
+                text: "Status",
+            });
+            link(status_link, "/feeds/status");
+            feed_fragment.append(create_element("li", {
+                children: [status_link],
+            }));
 
+            feed_list.append(feed_fragment);
             set_content(feed_list);
             break;
         default:
@@ -172,11 +185,12 @@ async function show_feed(uid) {
                 breadcrumbs: {uid: data.uid, name: data.name},
                 read_button: () => mark_feed_as_read_and_refresh(data.uid, data.last_updated),
             });
-            let item_list = document.createElement("div");
-            item_list.classList = "item-list";
+            let item_list = create_element("div", {class_name: "item-list"});
+            let item_fragment = document.createDocumentFragment();
             data.items?.forEach(item => {
-                item_list.appendChild(gen_item(item, {list_view: true}));
+                item_fragment.append(gen_item(item, {list_view: true}));
             });
+            item_list.append(item_fragment);
             set_content(item_list);
             break;
         default:
@@ -226,67 +240,55 @@ async function show_item(fuid, iuid) {
 function gen_item(item, opts) {
     let list_view = (opts && opts.list_view) || false;
 
-    let itemDiv = document.createElement("div");
-    itemDiv.classList.add("item");
-
-    let headerDiv = document.createElement("div");
-    headerDiv.classList.add("item-header");
-    itemDiv.appendChild(headerDiv);;
-
-    let titleDiv = document.createElement("div");
-    titleDiv.classList.add("item-title");
-    headerDiv.appendChild(titleDiv);;
-
-    let detailsDiv = document.createElement("div");
-    detailsDiv.classList.add("item-details");
-    headerDiv.appendChild(detailsDiv);;
-
-    let contentDiv = document.createElement("div");
-    contentDiv.classList.add("item-content");
-    itemDiv.append(contentDiv);
-
-    let title = document.createTextNode(item.title);
-    titleDiv.appendChild(title);
-    if (!list_view) {
-        titleDiv.classList.add("item-title-bold");
-    }
-
     let details = [];
     details.push(item.feed_name);
 
     if (item.authors) {
-        if (item.authors.length > 32) {
-            item.authors = item.authors.substr(0, 32) + "...";
-        }
-        details.push("by " + item.authors);
+        let authors = item.authors.length > 32
+            ? item.authors.substr(0, 32) + "..."
+            : item.authors;
+        details.push("by " + authors);
     }
 
     let when = relative_time_desc(item.timestamp);
     details.push(when);
 
-    let detailsNode = document.createTextNode(details.join(" · "));
-    detailsDiv.appendChild(detailsNode);
-
+    let title_div = create_element("div", {
+        class_name: list_view ? "item-title" : "item-title item-title-bold",
+        text: item.title,
+    });
+    let header_div = create_element("div", {
+        class_name: "item-header",
+        children: [
+            title_div,
+            create_element("div", {
+                class_name: "item-details",
+                text: details.join(" · "),
+            }),
+        ],
+    });
+    let item_children = [header_div];
     if (!list_view) {
-        contentDiv.innerHTML = item.content;
-        itemDiv.setAttribute("class", "item-full");
-    } else {
-        itemDiv.setAttribute("class", "item-summary");
-        contentDiv.parentNode.removeChild(contentDiv);
+        let content_div = create_element("div", {class_name: "item-content"});
+        content_div.innerHTML = item.content;
+        item_children.push(content_div);
     }
+
+    let item_div = create_element("div", {
+        class_name: list_view ? "item-summary" : "item-full",
+        children: item_children,
+    });
 
     if (list_view) {
-        let a = document.createElement("a");
-        link(a, `/feeds/${item.feed_uid}/items/${item.uid}`);
-        a.setAttribute("class", "item-link");
-        a.appendChild(itemDiv);
-        itemDiv = a;
-        if (item.read) {
-            a.setAttribute("class", a.getAttribute("class") + " item-link-read");
-        }
+        let item_link = create_element("a", {
+            class_name: item.read ? "item-link item-link-read" : "item-link",
+            children: [item_div],
+        });
+        link(item_link, `/feeds/${item.feed_uid}/items/${item.uid}`);
+        return item_link;
     }
 
-    return itemDiv;
+    return item_div;
 }
 
 async function refresh() {
@@ -336,12 +338,11 @@ async function show_status_feeds() {
             break;
         case 200:
             reset_controls({breadcrumbs: true});
-            let container = document.createElement("div");
+            let container = create_element("div");
+            let feed_fragment = document.createDocumentFragment();
             const THIRTY_DAYS = 30 * 24 * 60 * 60;
             data.forEach(feed => {
                 if (feed.uid === "all") return; // Skip the 'all' feed
-                let feedDiv = document.createElement("div");
-                feedDiv.classList.add("feed-status-block");
 
                 let status = "";
                 if (feed.last_error && feed.last_error.trim() !== "") {
@@ -355,70 +356,37 @@ async function show_status_feeds() {
                     status = "🟢";
                 }
 
-                let name = document.createElement("div");
-                name.classList.add("feed-status-name");
-                let a = document.createElement("a");
+                let a = create_element("a", {text: status + " " + feed.name});
                 link(a, `/feeds/${feed.uid}`);
-                a.textContent = status + " " + feed.name;
-                name.appendChild(a);
-                feedDiv.appendChild(name);
 
-                let table = document.createElement("table");
-                table.classList.add("feed-status-table");
-
-                let urlRow = document.createElement("tr");
-                let urlLabel = document.createElement("td");
-                urlLabel.textContent = "URL";
-                let urlValue = document.createElement("td");
-                urlValue.innerHTML = `<code>${feed.url || ""}</code>`;
-                urlRow.appendChild(urlLabel);
-                urlRow.appendChild(urlValue);
-                table.appendChild(urlRow);
-
-                let itemsRow = document.createElement("tr");
-                let itemsLabel = document.createElement("td");
-                itemsLabel.textContent = "Items";
-                let itemsValue = document.createElement("td");
-                itemsValue.textContent = `${feed.item_count} total, ${feed.item_count - feed.read_count} unread`;
-                itemsRow.appendChild(itemsLabel);
-                itemsRow.appendChild(itemsValue);
-                table.appendChild(itemsRow);
-
-                let updatedRow = document.createElement("tr");
-                let updatedLabel = document.createElement("td");
-                updatedLabel.textContent = "Last update";
-                let updatedValue = document.createElement("td");
-                updatedValue.textContent = feed.last_updated ? relative_time_desc(feed.last_updated) : "";
-                updatedRow.appendChild(updatedLabel);
-                updatedRow.appendChild(updatedValue);
-                table.appendChild(updatedRow);
+                let table = create_element("table", {class_name: "feed-status-table"});
+                table.append(
+                    table_row("URL", create_element("code", {text: feed.url || ""})),
+                    table_row("Items", `${feed.item_count} total, ${feed.item_count - feed.read_count} unread`),
+                    table_row("Last update", feed.last_updated ? relative_time_desc(feed.last_updated) : ""),
+                );
 
                 if (feed.last_item) {
-                    let recentRow = document.createElement("tr");
-                    let recentLabel = document.createElement("td");
-                    recentLabel.textContent = "Last item";
-                    let recentValue = document.createElement("td");
-                    recentValue.textContent = relative_time_desc(feed.last_item);
-                    recentRow.appendChild(recentLabel);
-                    recentRow.appendChild(recentValue);
-                    table.appendChild(recentRow);
+                    table.append(table_row("Last item", relative_time_desc(feed.last_item)));
                 }
 
                 if (feed.last_error) {
-                    let errorRow = document.createElement("tr");
-                    let errorLabel = document.createElement("td");
-                    errorLabel.textContent = "Error";
-                    let errorValue = document.createElement("td");
-                    errorValue.textContent = feed.last_error ? feed.last_error : "none";
-                    errorRow.appendChild(errorLabel);
-                    errorRow.appendChild(errorValue);
-                    table.appendChild(errorRow);
+                    table.append(table_row("Error", feed.last_error ? feed.last_error : "none"));
                 }
 
-                feedDiv.appendChild(table);
-                container.appendChild(feedDiv);
+                feed_fragment.append(create_element("div", {
+                    class_name: "feed-status-block",
+                    children: [
+                        create_element("div", {
+                            class_name: "feed-status-name",
+                            children: [a],
+                        }),
+                        table,
+                    ],
+                }));
             });
 
+            container.append(feed_fragment);
             set_content(container);
             break;
         default:
@@ -428,19 +396,14 @@ async function show_status_feeds() {
 }
 
 function set_content(...content) {
-    let elem = document.querySelector("#content");
-    while (elem.firstChild) {
-        elem.removeChild(elem.lastChild);
-    }
-    content.forEach(child => elem.appendChild(child));
+    document.querySelector("#content").replaceChildren(...content);
 }
 
 function set_loading() {
-    let div = document.createElement("div");
-    div.classList.add("loading");
-    let spinner = document.createElement("div");
-    spinner.classList.add("spinner");
-    div.appendChild(spinner);
+    let div = create_element("div", {
+        class_name: "loading",
+        children: [create_element("div", {class_name: "spinner"})],
+    });
     // iOS flashes an enlarged scrollbar in the loading screen when the
     // scrollbar is still being displayed because of a recent scroll event. The
     // following code makes us overlay the loading screen on iOS to prevent
@@ -453,7 +416,7 @@ function set_loading() {
         elem.childNodes.forEach(node => {
             node.classList.add("invisible");
         })
-        elem.appendChild(div);
+        elem.append(div);
     } else {
         set_content(div);
     }
@@ -477,35 +440,32 @@ function reset_controls(config) {
 
     document.querySelector("#controls").classList.remove("hidden");
 
-    let breadcrumbs = document.querySelector(`#breadcrumbs`);
+    let breadcrumbs = document.querySelector("#breadcrumbs");
     breadcrumbs.classList.add("hidden");
     if (config.breadcrumbs) {
         breadcrumbs.classList.remove("hidden");
 
         let items = document.querySelector("#breadcrumb-items");
-        items.textContent = "";
+        items.replaceChildren();
 
-        let bitem = document.createElement("div");
-        bitem.setAttribute("class", "breadcrumb-item");
-        a = document.createElement("a");
-        link(a, "/feeds");
-        a.appendChild(document.createTextNode("Feeds"));
-        bitem.appendChild(a);
-        items.appendChild(bitem);
+        let feeds_link = create_element("a", {text: "Feeds"});
+        link(feeds_link, "/feeds");
+        items.append(create_element("div", {
+            class_name: "breadcrumb-item",
+            children: [feeds_link],
+        }));
 
         if (typeof config.breadcrumbs === 'object' && config.breadcrumbs !== null) {
-            bitem = document.createElement("li");
-            bitem.setAttribute("class", "breadcrumb-item");
-            a = document.createElement("a");
-            link(a, `/feeds/${config.breadcrumbs.uid}`);
-            let name = config.breadcrumbs.name;
-            a.appendChild(document.createTextNode(`${name}`));
-            bitem.appendChild(a);
-            items.appendChild(bitem);
+            let feed_link = create_element("a", {text: config.breadcrumbs.name});
+            link(feed_link, `/feeds/${config.breadcrumbs.uid}`);
+            items.append(create_element("li", {
+                class_name: "breadcrumb-item",
+                children: [feed_link],
+            }));
         }
     }
 
-    let read_button = document.querySelector(`#read-button`);
+    let read_button = document.querySelector("#read-button");
     read_button.classList.add("hidden");
     read_button.onclick = null;
     if (config.read_button) {
@@ -515,7 +475,7 @@ function reset_controls(config) {
         }
     }
 
-    let open_button = document.querySelector(`#open-button`);
+    let open_button = document.querySelector("#open-button");
     open_button.classList.add("hidden");
     if (config.open_button) {
         link(open_button, config.open_button);

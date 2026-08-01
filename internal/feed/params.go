@@ -5,13 +5,12 @@ import (
 	"fmt"
 )
 
-// feedParams is to be implemented by specific feed params structs.
+// FeedParams is to be implemented by specific feed params structs.
 type FeedParams interface {
 	Validate() error
 }
 
-// parseParams takes feed params, unmarshalls them into the dst struct and
-// validates them.
+// ParseParams takes feed params, unmarshalls them into dst and validates them.
 func ParseParams(params any, dst FeedParams) error {
 	data, err := json.Marshal(params)
 	if err != nil {

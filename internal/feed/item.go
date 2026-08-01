@@ -9,8 +9,7 @@ type RawItem struct {
 	// Authors is short summary of authors of the item (usually
 	// comma-separated).
 	Authors string `json:"authors"`
-	// Content is the full content of the item, usually a sanitized HTML
-	// fragment.
+	// Content is the full content of the item as a sanitized HTML fragment.
 	Content string `json:"content"`
 	// Position is the position of the item in the feed when it was first seen.
 	// Assuming two items are first seen at the same time, a lower position
@@ -82,9 +81,7 @@ type ItemSummary struct {
 	// Read is true if the item was marked as read by the user.
 	Read bool `json:"read"`
 
-	// Content is the full content of the item, usually a sanitized HTML
-	// fragment. It comes directly from the feed and may safely be embedded in
-	// the page directly.
+	// Content is the full content of the item as a sanitized HTML fragment.
 	Content string `json:"content,omitempty"`
 }
 
