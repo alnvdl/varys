@@ -422,10 +422,24 @@ function set_loading() {
     }
 }
 
+function save_scroll_position() {
+    history.replaceState({
+        ...history.state,
+        scroll: {x: window.scrollX, y: window.scrollY},
+    }, "");
+}
+
+function restore_scroll_position(state) {
+    if (state?.scroll) {
+        window.scrollTo(state.scroll.x, state.scroll.y);
+    }
+}
+
 function link(a, url) {
     a.setAttribute("href", url);
     if (a.onclick) return;
     a.onclick = e => {
+        save_scroll_position();
         history.pushState(null, "", a.href);
         refresh();
         e.preventDefault();
@@ -486,12 +500,15 @@ function reset_controls(config) {
 }
 
 function start() {
-    history.scrollRestoration = "auto";
+    history.scrollRestoration = "manual";
     reset_controls();
     refresh();
 };
 
-window.onpopstate = refresh;
+window.onpopstate = async e => {
+    await refresh();
+    restore_scroll_position(e.state);
+};
 
 window.onload = () => {
     let read_button = document.querySelector("#read-button");
