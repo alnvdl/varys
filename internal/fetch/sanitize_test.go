@@ -2,6 +2,7 @@ package fetch_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/alnvdl/varys/internal/fetch"
@@ -106,6 +107,41 @@ func TestSanitizeHTML(t *testing.T) {
 		</form>`,
 		expected: `<div>Click me</div>`,
 		baseURL:  "https://example.com",
+	}, {
+		desc:     "javascript scheme in a href",
+		input:    `<a href="javascript:alert(document.cookie)">Click</a>`,
+		baseURL:  "https://example.com",
+		expected: `<a>Click</a>`,
+	}, {
+		desc:     "uppercase javascript scheme in a href",
+		input:    `<a href="JaVaScRiPt:alert(1)">Click</a>`,
+		baseURL:  "https://example.com",
+		expected: `<a>Click</a>`,
+	}, {
+		desc:     "data text/html scheme in img src",
+		input:    `<img src="data:text/html,<script>alert(1)</script>" alt="x">`,
+		baseURL:  "https://example.com",
+		expected: `<img alt="x"/>`,
+	}, {
+		desc:     "data image/svg+xml scheme in img src",
+		input:    `<img src="data:image/svg+xml,<svg onload=alert(1)>" alt="x">`,
+		baseURL:  "https://example.com",
+		expected: `<img alt="x"/>`,
+	}, {
+		desc:     "data image/png scheme in img src",
+		input:    `<img src="data:image/png;base64,AQID" alt="x">`,
+		baseURL:  "https://example.com",
+		expected: `<img src="data:image/png;base64,AQID" alt="x"/>`,
+	}, {
+		desc:     "mailto scheme in a href",
+		input:    `<a href="mailto:someone@example.com">Mail</a>`,
+		baseURL:  "https://example.com",
+		expected: `<a href="mailto:someone@example.com">Mail</a>`,
+	}, {
+		desc:     "excessively nested document is dropped without panicking",
+		input:    strings.Repeat("<div>", 600) + "text" + strings.Repeat("</div>", 600),
+		baseURL:  "",
+		expected: ``,
 	}}
 
 	for _, test := range tests {

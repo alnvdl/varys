@@ -51,6 +51,44 @@ var defaultAllowedAttrs = map[string]map[string]bool{
 	"img":     {"alt": true, "src": true},
 }
 
+// safeURLSchemes lists the URL schemes allowed in href and src attributes.
+// Everything else (e.g. javascript:, vbscript:) is rejected to prevent XSS via
+// scriptable URLs. The data: scheme is handled separately (see isSafeDataURL).
+var safeURLSchemes = map[string]bool{
+	"http":   true,
+	"https":  true,
+	"mailto": true,
+}
+
+// safeDataURLPrefixes lists the data: URL media type prefixes allowed in src
+// attributes. Only non-scriptable raster image types are permitted; notably
+// image/svg+xml and text/html are excluded because they can execute scripts.
+var safeDataURLPrefixes = []string{
+	"data:image/png",
+	"data:image/jpeg",
+	"data:image/gif",
+	"data:image/webp",
+}
+
+// isSafeDataURL reports whether val is a data: URL with an allowed image media
+// type. The check is case-insensitive on the scheme and media type.
+func isSafeDataURL(val string) bool {
+	lower := strings.ToLower(val)
+	for _, prefix := range safeDataURLPrefixes {
+		// Checks for patterns like data:image/png;base64,... and
+		// data:image/png,...
+		if strings.HasPrefix(lower, prefix+";") || strings.HasPrefix(lower, prefix+",") {
+			return true
+		}
+	}
+	return false
+}
+
+// maxSanitizeDepth bounds how deep the sanitizer recurses into the parsed HTML
+// tree. It guards against stack exhaustion from maliciously nested documents
+// while staying well above the nesting depth of any legitimate feed content.
+const maxSanitizeDepth = 512
+
 // SilentlySanitizeHTML works like sanitizeHTML but it uses a default
 // configuration and silences errors.
 func silentlySanitizeHTML(input string, baseURL *url.URL) string {
@@ -71,7 +109,7 @@ func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[st
 	newDoc := &html.Node{
 		Type: html.DocumentNode,
 	}
-	sanitizeNode(doc, newDoc, allowedTags, allowedAttrs, baseURL)
+	sanitizeNode(doc, newDoc, allowedTags, allowedAttrs, baseURL, 0)
 
 	var buf bytes.Buffer
 	if err := html.Render(&buf, newDoc); err != nil {
@@ -80,7 +118,10 @@ func sanitizeHTML(input string, allowedTags map[string]bool, allowedAttrs map[st
 	return strings.TrimSpace(buf.String()), nil
 }
 
-func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool, baseURL *url.URL) {
+func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allowedAttrs map[string]map[string]bool, baseURL *url.URL, depth int) {
+	if depth > maxSanitizeDepth {
+		return
+	}
 	if node.Type == html.ElementNode && allowedTags[node.Data] {
 		newNode := &html.Node{
 			Type: html.ElementNode,
@@ -93,6 +134,16 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 					parsedURL, err := url.Parse(attr.Val)
 					if err != nil {
 						continue
+					}
+					// Reject scriptable schemes such as javascript: and
+					// vbscript:. Relative URLs have an empty scheme and are
+					// allowed. data: URLs are only allowed for safe image
+					// media types.
+					scheme := strings.ToLower(parsedURL.Scheme)
+					if scheme != "" && !safeURLSchemes[scheme] {
+						if scheme != "data" || !isSafeDataURL(attr.Val) {
+							continue
+						}
 					}
 					if baseURL != nil && !parsedURL.IsAbs() {
 						attr.Val = baseURL.ResolveReference(parsedURL).String()
@@ -119,7 +170,7 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 		if node.Type == html.DocumentNode ||
 			(node.Type == html.ElementNode && allowedTags[node.Data]) ||
 			(node.Type == html.ElementNode && (node.DataAtom == atom.Html || node.DataAtom == atom.Body)) {
-			sanitizeNode(c, newParent, allowedTags, allowedAttrs, baseURL)
+			sanitizeNode(c, newParent, allowedTags, allowedAttrs, baseURL, depth+1)
 		}
 	}
 }
