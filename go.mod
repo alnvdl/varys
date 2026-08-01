@@ -1,6 +1,6 @@
 module github.com/alnvdl/varys
 
-go 1.25.6
+go 1.26.5
 
 require golang.org/x/net v0.57.0
 
