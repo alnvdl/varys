@@ -135,9 +135,9 @@ func sanitizeNode(node, newParent *html.Node, allowedTags map[string]bool, allow
 					if err != nil {
 						continue
 					}
-					// Reject scriptable schemes such as javascript: and
-					// vbscript:. Relative URLs have an empty scheme and are
-					// allowed. data: URLs are only allowed for safe image
+					// Reject scriptable schemes such as javascript:
+					// and vbscript:. Relative URLs have an empty scheme and
+					// are allowed. data: URLs are only allowed for safe image
 					// media types.
 					scheme := strings.ToLower(parsedURL.Scheme)
 					if scheme != "" && !safeURLSchemes[scheme] {

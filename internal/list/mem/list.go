@@ -61,10 +61,10 @@ type ListParams struct {
 	// will be used.
 	Fetcher func(p fetch.FetchParams) ([]feed.RawItem, int64, error)
 
-	// AutoSaveParams is the configuration for auto-save. If FilePath is
-	// empty, auto-save will be disabled and the list will be entirely
-	// in-memory only. The LoaderSave field will be set to the created List, so
-	// any value set by the caller will be ignored.
+	// AutoSaveParams is the configuration for auto-save. If FilePath is empty,
+	// auto-save will be disabled and the list will be entirely in-memory only.
+	// The LoaderSave field will be set to the created List, so any value set
+	// by the caller will be ignored.
 	AutoSaveParams autosave.Params
 }
 
@@ -301,9 +301,9 @@ func (l *List) Close() {
 	}
 }
 
-// allFeed returns the feed summary for the virtual feed containing all
-// items from the given feeds. If withItems is true, it includes the items in
-// the feed.
+// allFeed returns the feed summary for the virtual feed containing all items
+// from the given feeds. If withItems is true, it includes the items in the
+// feed.
 func allFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSummary {
 	allFeed := &feed.Feed{
 		Name:            "All",

@@ -24,8 +24,8 @@ type Feed struct {
 	// file.
 	Type string `json:"type"`
 
-	// URL is the URL from which the feed is fetched. If this is empty, the
-	// feed is assumed to be a virtual feed managed by the application.
+	// URL is the URL from which the feed is fetched. If this is empty,
+	// the feed is assumed to be a virtual feed managed by the application.
 	URL string `json:"url"`
 
 	// Items is a map of items in the feed. The key is the UID of the item.
@@ -210,8 +210,8 @@ func (f *Feed) MarkAllRead(before int64) {
 	}
 }
 
-// Summary returns a summary of the feed. If withItems is true, it includes the
-// items in the feed. itemMapper should usually be nil; it's only used in
+// Summary returns a summary of the feed. If withItems is true, it includes
+// the items in the feed. itemMapper should usually be nil; it's only used in
 // special cases when building virtual feeds containing items from other feeds.
 func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary {
 	items := f.SortedItems()

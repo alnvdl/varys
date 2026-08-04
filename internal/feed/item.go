@@ -73,8 +73,8 @@ type ItemSummary struct {
 	// Timestamp is the time when the item was first seen.
 	Timestamp int64 `json:"timestamp"`
 
-	// Authors is a short comma-separated summary of authors of the item. It
-	// comes directly from the feed and is not sanitized. Do not embed it in
+	// Authors is a short comma-separated summary of authors of the item.
+	// It comes directly from the feed and is not sanitized. Do not embed it in
 	// the page directly without proper measures.
 	Authors string `json:"authors"`
 

@@ -45,8 +45,8 @@ func (p *htmlParams) Validate() error {
 type candidateItem struct {
 	url string
 
-	// parts are relevant segments from inside the candidate item. They are
-	// usually extracted from text nodes and img tags, and have to be
+	// parts are relevant segments from inside the candidate item. They
+	// are usually extracted from text nodes and img tags, and have to be
 	// interpreted by the caller (e.g., to determine the title).
 	parts []string
 
@@ -95,8 +95,8 @@ func extractCandidateItem(anchor *html.Node, baseURL *url.URL, allowedPrefixes [
 				}
 			}
 		}
-		// We checked the allowed tags to prevent useless content (e.g., a
-		// "style" node) from being picked up.
+		// We checked the allowed tags to prevent useless content (e.g.,
+		// a "style" node) from being picked up.
 		if n.Type == html.TextNode && n.Parent != nil && defaultAllowedTags[n.Parent.Data] {
 			text := strings.TrimSpace(n.Data)
 			if text != "" {

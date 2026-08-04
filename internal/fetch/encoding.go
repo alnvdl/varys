@@ -5,8 +5,8 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-// encodingMap maps encoding names to encoding.Encoding instances. It is
-// sourced from the golang.org/x/text/encoding/charmap package (see
+// encodingMap maps encoding names to encoding.Encoding instances.
+// It is sourced from the golang.org/x/text/encoding/charmap package (see
 // charmap.All).
 var encodingMap = map[string]encoding.Encoding{
 	"CodePage037":       charmap.CodePage037,
