@@ -388,5 +388,9 @@ free tier, as long as you have a reasonable number of feeds.
    the deployment is using the `main` tag mentioned in step 1).
 
 ## Icons
-All icons in this project come from the Bootstrap project:
-https://icons.getbootstrap.com/.
+The app icon comes from the Bootstrap project, under the MIT license:
+https://icons.getbootstrap.com/
+
+The UI icons come from the Material Symbols & Icons project, under the Apache
+license:
+https://fonts.google.com/icons

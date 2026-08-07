@@ -1,5 +1,45 @@
 const TOKEN_PREFIX = "token:";
 const HOME_PATH = "/feeds/all";
+const DESKTOP_MEDIA_QUERY = "(min-width: 1280px)";
+
+function is_desktop_mode() {
+    return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
+}
+
+function load_desktop_assets() {
+    if (!is_desktop_mode()) return;
+
+    let stylesheet = document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/static/varys-desktop.css";
+    let start_mobile = () => {
+        if (stylesheet.parentNode) {
+            stylesheet.parentNode.removeChild(stylesheet);
+        }
+        start_mobile_mode();
+    };
+    stylesheet.onerror = start_mobile;
+    stylesheet.onload = () => {
+        let script = document.createElement("script");
+        script.src = "/static/varys-desktop.js";
+        script.onerror = start_mobile;
+        script.onload = () => desktop_start().catch(start_mobile);
+        document.head.append(script);
+    };
+    document.head.append(stylesheet);
+}
+
+load_desktop_assets();
+
+function start_mode_detection() {
+    let desktop_query = window.matchMedia(DESKTOP_MEDIA_QUERY);
+    let reload = () => window.location.reload();
+    if (desktop_query.addEventListener) {
+        desktop_query.addEventListener("change", reload);
+    } else {
+        desktop_query.addListener(reload);
+    }
+}
 
 function get_current_state() {
     let url = window.location.pathname;
@@ -36,6 +76,18 @@ async function fetch_feed(uid) {
 }
 
 async function fetch_item(fuid, iuid) {
+    if (fuid === "all") {
+        let [feed_response, feed] = await fetch_feed(fuid);
+        if (feed_response.status !== 200) {
+            return [feed_response, feed];
+        }
+
+        let item = feed.items?.find(item => item.uid === iuid);
+        if (item) {
+            fuid = item.feed_uid;
+        }
+    }
+
     return fetch_json(`/api/feeds/${fuid}/items/${iuid}`);
 }
 
@@ -81,6 +133,13 @@ function create_element(tag, {class_name, text, children = []} = {}) {
     return element;
 }
 
+function replace_children(element, ...children) {
+    while (element.firstChild) {
+        element.removeChild(element.firstChild);
+    }
+    element.append(...children);
+}
+
 function table_row(label, value) {
     return create_element("tr", {
         children: [
@@ -88,6 +147,130 @@ function table_row(label, value) {
             create_element("td", {children: [value]}),
         ],
     });
+}
+
+function gen_feed_list(feeds, opts = {}) {
+    let feed_list = create_element("ol", {class_name: "feed-list"});
+    let feed_fragment = document.createDocumentFragment();
+    feeds.forEach(feed => {
+        let a = create_element("a", {text: feed.name});
+        let feed_url = opts.feed_url
+            ? opts.feed_url(feed)
+            : `/feeds/${feed.uid}`;
+        link(a, feed_url, opts.link_handler);
+
+        let unread = feed.item_count - feed.read_count;
+        if (unread) {
+            a.append(create_element("span", {
+                class_name: "feed-unread-count",
+                text: unread,
+            }));
+        }
+
+        let class_name = unread ? "" : "feed-read";
+        if (feed.uid === opts.selected_uid) {
+            class_name += " feed-selected";
+        }
+        let feed_item = create_element("li", {
+            class_name,
+            children: [a],
+        });
+        feed_item.dataset.feedUid = feed.uid;
+        feed_fragment.append(feed_item);
+    });
+
+    if (opts.include_status !== false) {
+        let status_link = create_element("a", {
+            class_name: "feed-status",
+            text: "Status",
+        });
+        link(status_link, "/feeds/status", opts.link_handler);
+        feed_fragment.append(create_element("li", {
+            children: [status_link],
+        }));
+    }
+
+    feed_list.append(feed_fragment);
+    return feed_list;
+}
+
+function gen_item_list(feed, opts = {}) {
+    let item_list = create_element("div", {class_name: "item-list"});
+    if (!feed.items?.length) {
+        item_list.append(create_element("div", {
+            class_name: "empty-message",
+            text: "No items.",
+        }));
+        return item_list;
+    }
+
+    let item_fragment = document.createDocumentFragment();
+    feed.items.forEach(item => {
+        let item_url = opts.item_url
+            ? opts.item_url(item)
+            : `/feeds/${feed.uid}/items/${item.uid}`;
+        item_fragment.append(gen_item(item, {
+            list_view: true,
+            item_url,
+            link_handler: opts.link_handler,
+            selected: item.uid === opts.selected_uid,
+        }));
+    });
+    item_list.append(item_fragment);
+    return item_list;
+}
+
+function gen_status_content(feeds, opts = {}) {
+    let container = create_element("div");
+    let feed_fragment = document.createDocumentFragment();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60;
+    feeds.forEach(feed => {
+        if (feed.uid === "all") return;
+
+        let status = "";
+        if (feed.last_error && feed.last_error.trim() !== "") {
+            status = "🔴";
+        } else if (feed.last_updated && (
+            (now() - feed.last_item) > THIRTY_DAYS ||
+            feed.item_count === 0) ||
+            feed.last_item === 0) {
+            status = "🟡";
+        } else {
+            status = "🟢";
+        }
+
+        let a = create_element("a", {text: status + " " + feed.name});
+        link(a, `/feeds/${feed.uid}`, opts.link_handler);
+
+        let table = create_element("table", {class_name: "feed-status-table"});
+        table.append(
+            table_row("URL", create_element("code", {text: feed.url || ""})),
+            table_row("Items", `${feed.item_count} total, ${feed.item_count - feed.read_count} unread`),
+            table_row("Last update", feed.last_updated ? relative_time_desc(feed.last_updated) : ""),
+        );
+
+        if (feed.last_item) {
+            table.append(table_row("Last item", relative_time_desc(feed.last_item)));
+        }
+
+        if (feed.last_error) {
+            table.append(table_row("Error", feed.last_error ? feed.last_error : "none"));
+        }
+
+        feed_fragment.append(create_element("div", {
+            class_name: "feed-status-block",
+            children: [
+                create_element("div", {
+                    class_name: "feed-status-name",
+                    children: [a],
+                }),
+                table,
+            ],
+        }));
+    });
+
+    container.append(feed_fragment);
+    return container;
 }
 
 // Page state.
@@ -121,37 +304,7 @@ async function show_feeds() {
                 breadcrumbs: true,
                 read_button: () => mark_all_feeds_as_read_and_refresh(all_feed),
             });
-            let feed_list = create_element("ol", {class_name: "feed-list"});
-            let feed_fragment = document.createDocumentFragment();
-            data.forEach(feed => {
-                let a = create_element("a", {text: feed.name});
-                link(a, `/feeds/${feed.uid}`);
-
-                let unread = feed.item_count - feed.read_count;
-                if (unread) {
-                    a.append(create_element("span", {
-                        class_name: "feed-unread-count",
-                        text: unread,
-                    }));
-                }
-
-                feed_fragment.append(create_element("li", {
-                    class_name: unread ? "" : "feed-read",
-                    children: [a],
-                }));
-            });
-
-            let status_link = create_element("a", {
-                class_name: "feed-status",
-                text: "Status",
-            });
-            link(status_link, "/feeds/status");
-            feed_fragment.append(create_element("li", {
-                children: [status_link],
-            }));
-
-            feed_list.append(feed_fragment);
-            set_content(feed_list);
+            set_content(gen_feed_list(data));
             break;
         default:
             error(`Unexpected response code: ${rsp.status}`);
@@ -185,13 +338,7 @@ async function show_feed(uid) {
                 breadcrumbs: {uid: data.uid, name: data.name},
                 read_button: () => mark_feed_as_read_and_refresh(data.uid, data.last_updated),
             });
-            let item_list = create_element("div", {class_name: "item-list"});
-            let item_fragment = document.createDocumentFragment();
-            data.items?.forEach(item => {
-                item_fragment.append(gen_item(item, {list_view: true}));
-            });
-            item_list.append(item_fragment);
-            set_content(item_list);
+            set_content(gen_item_list(data));
             break;
         default:
             error(`Unexpected response code: ${rsp.status}`);
@@ -222,7 +369,10 @@ async function show_item(fuid, iuid) {
             break;
         case 200:
             reset_controls({
-                breadcrumbs: {uid: data.feed, name: data.feed_name},
+                breadcrumbs: {
+                    uid: fuid,
+                    name: fuid === "all" ? "All" : data.feed_name,
+                },
                 open_button: data.url,
             });
             set_content(gen_item(data));
@@ -237,9 +387,8 @@ async function show_item(fuid, iuid) {
     }
 }
 
-function gen_item(item, opts) {
-    let list_view = (opts && opts.list_view) || false;
-
+function gen_item_header(item, opts = {}) {
+    let list_view = opts.list_view || false;
     let details = [];
     details.push(item.feed_name);
 
@@ -253,25 +402,35 @@ function gen_item(item, opts) {
     let when = relative_time_desc(item.timestamp);
     details.push(when);
 
-    let title_div = create_element("div", {
-        class_name: list_view ? "item-title" : "item-title item-title-bold",
-        text: item.title,
-    });
-    let header_div = create_element("div", {
+    return create_element("div", {
         class_name: "item-header",
         children: [
-            title_div,
+            create_element("div", {
+                class_name: list_view ? "item-title" : "item-title item-title-bold",
+                text: item.title,
+            }),
             create_element("div", {
                 class_name: "item-details",
                 text: details.join(" · "),
             }),
         ],
     });
+}
+
+function gen_item_content(item) {
+    let content_div = create_element("div", {class_name: "item-content"});
+    content_div.innerHTML = item.content;
+    return content_div;
+}
+
+function gen_item(item, opts) {
+    opts = opts || {};
+    let list_view = (opts && opts.list_view) || false;
+
+    let header_div = gen_item_header(item, {list_view});
     let item_children = [header_div];
     if (!list_view) {
-        let content_div = create_element("div", {class_name: "item-content"});
-        content_div.innerHTML = item.content;
-        item_children.push(content_div);
+        item_children.push(gen_item_content(item));
     }
 
     let item_div = create_element("div", {
@@ -280,11 +439,16 @@ function gen_item(item, opts) {
     });
 
     if (list_view) {
+        let class_name = item.read ? "item-link item-link-read" : "item-link";
+        if (opts.selected) {
+            class_name += " item-link-selected";
+        }
         let item_link = create_element("a", {
-            class_name: item.read ? "item-link item-link-read" : "item-link",
+            class_name,
             children: [item_div],
         });
-        link(item_link, `/feeds/${item.feed_uid}/items/${item.uid}`);
+        item_link.dataset.itemUid = item.uid;
+        link(item_link, opts.item_url || `/feeds/${item.feed_uid}/items/${item.uid}`, opts.link_handler);
         return item_link;
     }
 
@@ -338,56 +502,7 @@ async function show_status_feeds() {
             break;
         case 200:
             reset_controls({breadcrumbs: true});
-            let container = create_element("div");
-            let feed_fragment = document.createDocumentFragment();
-            const THIRTY_DAYS = 30 * 24 * 60 * 60;
-            data.forEach(feed => {
-                if (feed.uid === "all") return; // Skip the 'all' feed
-
-                let status = "";
-                if (feed.last_error && feed.last_error.trim() !== "") {
-                    status = "🔴";
-                } else if (feed.last_updated && (
-                    (now() - feed.last_item) > THIRTY_DAYS ||
-                    feed.item_count === 0) ||
-                    feed.last_item === 0) {
-                    status = "🟡";
-                } else {
-                    status = "🟢";
-                }
-
-                let a = create_element("a", {text: status + " " + feed.name});
-                link(a, `/feeds/${feed.uid}`);
-
-                let table = create_element("table", {class_name: "feed-status-table"});
-                table.append(
-                    table_row("URL", create_element("code", {text: feed.url || ""})),
-                    table_row("Items", `${feed.item_count} total, ${feed.item_count - feed.read_count} unread`),
-                    table_row("Last update", feed.last_updated ? relative_time_desc(feed.last_updated) : ""),
-                );
-
-                if (feed.last_item) {
-                    table.append(table_row("Last item", relative_time_desc(feed.last_item)));
-                }
-
-                if (feed.last_error) {
-                    table.append(table_row("Error", feed.last_error ? feed.last_error : "none"));
-                }
-
-                feed_fragment.append(create_element("div", {
-                    class_name: "feed-status-block",
-                    children: [
-                        create_element("div", {
-                            class_name: "feed-status-name",
-                            children: [a],
-                        }),
-                        table,
-                    ],
-                }));
-            });
-
-            container.append(feed_fragment);
-            set_content(container);
+            set_content(gen_status_content(data));
             break;
         default:
             error(`Unexpected response code: ${rsp.status}`);
@@ -396,7 +511,7 @@ async function show_status_feeds() {
 }
 
 function set_content(...content) {
-    document.querySelector("#content").replaceChildren(...content);
+    replace_children(document.querySelector("#content"), ...content);
 }
 
 function set_loading() {
@@ -435,13 +550,13 @@ function restore_scroll_position(state) {
     }
 }
 
-function link(a, url) {
+function link(a, url, navigate = refresh) {
     a.setAttribute("href", url);
     if (a.onclick) return;
     a.onclick = e => {
         save_scroll_position();
         history.pushState(null, "", a.href);
-        refresh();
+        navigate();
         e.preventDefault();
     };
 }
@@ -460,7 +575,7 @@ function reset_controls(config) {
         breadcrumbs.classList.remove("hidden");
 
         let items = document.querySelector("#breadcrumb-items");
-        items.replaceChildren();
+        replace_children(items);
 
         let feeds_link = create_element("a", {text: "Feeds"});
         link(feeds_link, "/feeds");
@@ -499,6 +614,23 @@ function reset_controls(config) {
     }
 }
 
+function start_mobile_mode() {
+    if (document.readyState === "loading") {
+        window.addEventListener("load", start_mobile_mode, {once: true});
+        return;
+    }
+
+    start_mode_detection();
+
+    let read_button = document.querySelector("#read-button");
+    read_button.addEventListener("touchstart", () => { });
+
+    let open_button = document.querySelector("#open-button");
+    open_button.addEventListener("touchstart", () => { });
+
+    start();
+}
+
 function start() {
     history.scrollRestoration = "auto";
     reset_controls();
@@ -510,15 +642,10 @@ window.onpopstate = async e => {
     restore_scroll_position(e.state);
 };
 
-window.onload = () => {
-    let read_button = document.querySelector("#read-button");
-    read_button.addEventListener("touchstart", () => { });
-
-    let open_button = document.querySelector("#open-button");
-    open_button.addEventListener("touchstart", () => { });
-
-    start();
-};
+window.addEventListener("load", () => {
+    if (is_desktop_mode()) return;
+    start_mobile_mode();
+});
 
 // now returns the current time in seconds since the Unix epoch.
 function now() {
