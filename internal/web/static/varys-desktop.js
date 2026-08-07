@@ -238,7 +238,7 @@ async function desktop_refresh(opts = {}) {
 
     let status_page = selected_uid === "status";
     if (status_page) {
-        desktop_render_feed_list(feeds);
+        desktop_render_feed_list(feeds, selected_uid);
         desktop_elements.feedTitle.textContent = "Status";
         desktop_set_read_button(desktop_elements.feedReadButton);
         desktop_set_content(desktop_elements.itemList, gen_status_content(feeds, {

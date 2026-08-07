@@ -188,9 +188,12 @@ function gen_feed_list(feeds, opts = {}) {
             text: "Status",
         });
         link(status_link, "/feeds/status", opts.link_handler);
-        feed_fragment.append(create_element("li", {
+        let status_item = create_element("li", {
+            class_name: opts.selected_uid === "status" ? "feed-selected" : "",
             children: [status_link],
-        }));
+        });
+        status_item.dataset.feedUid = "status";
+        feed_fragment.append(status_item);
     }
 
     feed_list.append(feed_fragment);

@@ -3,6 +3,12 @@
     --font-size: 15px;
 }
 
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
 #controls,
 #content {
     display: none;
@@ -11,7 +17,7 @@
 #desktop-app {
     display: grid;
     grid-template-columns: 15% 40% 45%;
-    height: 100vh;
+    height: 100dvh;
 }
 
 .desktop-panel {
@@ -33,6 +39,7 @@
     background-color: var(--controls-bg-color);
     font-weight: bold;
     line-height: normal;
+    gap: 8px;
 }
 
 .desktop-control-title {
@@ -67,6 +74,7 @@
 .desktop-panel-content {
     box-sizing: border-box;
     height: calc(100vh - var(--controls-height));
+    height: calc(100dvh - var(--controls-height));
     overflow-y: auto;
     padding: 8px 16px 16px 16px;
 }
