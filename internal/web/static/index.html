@@ -34,14 +34,14 @@
                 <div id="breadcrumb-items" class="breadcrumbs"></div>
             </nav>
             <div id="action-area">
-                <a id="read-button">
+                <button id="read-button" class="icon-button" type="button" aria-label="Mark as read">
                     <div class="icon-container">
                         <svg class="icon" fill="currentColor" aria-hidden="true">
                             <use href="#check-square-icon"></use>
                         </svg>
                     </div>
-                </a>
-                <a id="open-button">
+                </button>
+                <a id="open-button" class="icon-button" aria-label="Open feed item">
                     <div class="icon-container">
                         <svg class="icon" fill="currentColor" aria-hidden="true">
                             <use href="#box-arrow-up-right-icon"></use>
@@ -58,13 +58,13 @@
         <section id="desktop-feed-panel" class="desktop-panel">
             <div class="desktop-controls">
                 <div class="desktop-control-title">Feeds</div>
-                <a id="desktop-all-read-button">
+                <button id="desktop-all-read-button" class="icon-button" type="button" aria-label="Mark all feeds as read">
                     <div class="icon-container">
                         <svg class="icon" fill="currentColor" aria-hidden="true">
                             <use href="#check-square-icon"></use>
                         </svg>
                     </div>
-                </a>
+                </button>
             </div>
             <div id="desktop-feed-list" class="desktop-panel-content"></div>
         </section>
@@ -72,13 +72,13 @@
         <section id="desktop-item-list-panel" class="desktop-panel">
             <div class="desktop-controls">
                 <div id="desktop-feed-title" class="desktop-control-title"></div>
-                <a id="desktop-feed-read-button">
+                <button id="desktop-feed-read-button" class="icon-button" type="button" aria-label="Mark feed as read">
                     <div class="icon-container">
                         <svg class="icon" fill="currentColor" aria-hidden="true">
                             <use href="#check-square-icon"></use>
                         </svg>
                     </div>
-                </a>
+                </button>
             </div>
             <div id="desktop-item-list" class="desktop-panel-content"></div>
         </section>
@@ -86,7 +86,7 @@
         <section id="desktop-item-panel" class="desktop-panel">
             <div class="desktop-controls">
                 <div id="desktop-item-title" class="desktop-control-title"></div>
-                <a id="desktop-open-button" class="hidden">
+                <a id="desktop-open-button" class="icon-button" hidden aria-label="Open feed item">
                     <div class="icon-container">
                         <svg class="icon" fill="currentColor" aria-hidden="true">
                             <use href="#box-arrow-up-right-icon"></use>

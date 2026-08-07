@@ -594,6 +594,14 @@ func TestStatic(t *testing.T) {
 		url:            "/static/varys.js",
 		expectedStatus: http.StatusOK,
 	}, {
+		desc:           "GET /static/varys-desktop.css",
+		url:            "/static/varys-desktop.css",
+		expectedStatus: http.StatusOK,
+	}, {
+		desc:           "GET /static/varys-desktop.js",
+		url:            "/static/varys-desktop.js",
+		expectedStatus: http.StatusOK,
+	}, {
 		desc:           "GET /static/icon.svg",
 		url:            "/static/icon.svg",
 		expectedStatus: http.StatusOK,

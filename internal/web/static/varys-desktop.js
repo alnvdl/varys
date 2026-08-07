@@ -1,60 +1,75 @@
-function desktop_set_content(id, ...content) {
-    replace_children(document.querySelector(id), ...content);
+let desktop_elements;
+
+function desktop_init() {
+    desktop_elements = {
+        feedList: document.querySelector("#desktop-feed-list"),
+        feedTitle: document.querySelector("#desktop-feed-title"),
+        feedReadButton: document.querySelector("#desktop-feed-read-button"),
+        allReadButton: document.querySelector("#desktop-all-read-button"),
+        itemList: document.querySelector("#desktop-item-list"),
+        itemTitle: document.querySelector("#desktop-item-title"),
+        itemContent: document.querySelector("#desktop-item-content"),
+        openButton: document.querySelector("#desktop-open-button"),
+    };
 }
 
-function desktop_set_loading() {
-    let loading = () => create_element("div", {
+function desktop_set_content(element, ...content) {
+    element.replaceChildren(...content);
+}
+
+function desktop_spinner() {
+    return create_element("div", {
         class_name: "desktop-spinner",
         children: [create_element("div", {class_name: "spinner"})],
     });
-    desktop_set_content("#desktop-feed-list", loading());
-    desktop_set_content("#desktop-item-list", loading());
-    desktop_set_content("#desktop-item-content", loading());
+}
+
+function desktop_set_panel_loading(...elements) {
+    elements.forEach(element => desktop_set_content(element, desktop_spinner()));
+}
+
+function desktop_set_loading() {
+    desktop_set_panel_loading(
+        desktop_elements.feedList,
+        desktop_elements.itemList,
+        desktop_elements.itemContent,
+    );
 }
 
 function desktop_set_item_list_loading() {
-    desktop_set_content("#desktop-item-list", create_element("div", {
-        class_name: "desktop-spinner",
-        children: [create_element("div", {class_name: "spinner"})],
-    }));
+    desktop_set_panel_loading(desktop_elements.itemList);
 }
 
 function desktop_set_feed_list_loading() {
-    desktop_set_content("#desktop-feed-list", create_element("div", {
-        class_name: "desktop-spinner",
-        children: [create_element("div", {class_name: "spinner"})],
-    }));
+    desktop_set_panel_loading(desktop_elements.feedList);
 }
 
 function desktop_set_feed_view_loading() {
-    replace_children(document.querySelector("#desktop-feed-title"));
-    desktop_set_read_button(
-        document.querySelector("#desktop-feed-read-button"),
-    );
+    desktop_elements.feedTitle.replaceChildren();
+    desktop_set_read_button(desktop_elements.feedReadButton);
     desktop_set_item_list_loading();
 }
 
 function desktop_set_item_view_loading() {
     desktop_set_item_content();
-    desktop_set_content("#desktop-item-content", create_element("div", {
-        class_name: "desktop-spinner",
-        children: [create_element("div", {class_name: "spinner"})],
-    }));
+    desktop_set_panel_loading(desktop_elements.itemContent);
 }
 
 function desktop_set_error(message) {
     console.trace(message);
     let error = create_element("div", {class_name: "error", text: message});
-    desktop_set_content("#desktop-feed-list", error.cloneNode(true));
-    desktop_set_content("#desktop-item-list", error.cloneNode(true));
-    desktop_set_content("#desktop-item-content", error);
+    desktop_set_content(desktop_elements.feedList, error.cloneNode(true));
+    desktop_set_content(desktop_elements.itemList, error.cloneNode(true));
+    desktop_set_content(desktop_elements.itemContent, error);
 }
 
 function desktop_set_open_button(item) {
-    let open_button = document.querySelector("#desktop-open-button");
-    open_button.classList.toggle("hidden", !item);
+    let open_button = desktop_elements.openButton;
+    open_button.hidden = !item;
     if (!item) {
         open_button.removeAttribute("href");
+        open_button.removeAttribute("target");
+        open_button.removeAttribute("rel");
         return;
     }
 
@@ -64,17 +79,17 @@ function desktop_set_open_button(item) {
 }
 
 function desktop_set_item_content(item) {
-    let title = document.querySelector("#desktop-item-title");
-    replace_children(title);
+    let title = desktop_elements.itemTitle;
+    title.replaceChildren();
     if (item) {
         title.append(gen_item_header(item, {list_view: true}));
     }
     desktop_set_open_button(item);
 
     if (item) {
-        desktop_set_content("#desktop-item-content", gen_item_content(item));
+        desktop_set_content(desktop_elements.itemContent, gen_item_content(item));
     } else {
-        desktop_set_content("#desktop-item-content", create_element("div", {
+        desktop_set_content(desktop_elements.itemContent, create_element("div", {
             class_name: "empty-message",
             text: "No item selected.",
         }));
@@ -90,7 +105,7 @@ function desktop_set_read_button(
     } = {},
 ) {
     button.onclick = null;
-    button.classList.toggle("hidden", !feed);
+    button.hidden = !feed;
     if (!feed) return;
 
     button.onclick = async () => {
@@ -117,27 +132,25 @@ function desktop_update_read_state(feeds, feed, item) {
 
 function desktop_render_feed_list(feeds, selected_uid) {
     desktop_feeds = feeds;
-    desktop_set_content("#desktop-feed-list", gen_feed_list(feeds, {
+    desktop_set_content(desktop_elements.feedList, gen_feed_list(feeds, {
         selected_uid,
         link_handler: desktop_select_feed,
     }));
 
     let all_feed = feeds.find(feed => feed.uid === "all");
-    desktop_set_read_button(
-        document.querySelector("#desktop-all-read-button"),
-        all_feed,
+    desktop_set_read_button(desktop_elements.allReadButton, all_feed,
         {loading: desktop_set_feed_list_loading, refresh: {loading: false}},
     );
 }
 
 function desktop_set_feed_selection(selected_uid) {
-    document.querySelectorAll("#desktop-feed-list [data-feed-uid]").forEach(feed_item => {
+    desktop_elements.feedList.querySelectorAll("[data-feed-uid]").forEach(feed_item => {
         feed_item.classList.toggle("feed-selected", feed_item.dataset.feedUid === selected_uid);
     });
 }
 
 function desktop_set_item_selection(selected_uid) {
-    document.querySelectorAll("#desktop-item-list [data-item-uid]").forEach(item_link => {
+    desktop_elements.itemList.querySelectorAll("[data-item-uid]").forEach(item_link => {
         item_link.classList.toggle("item-link-selected", item_link.dataset.itemUid === selected_uid);
     });
 }
@@ -161,30 +174,16 @@ function desktop_select_item() {
 }
 
 function desktop_render_feed(feed, selected_item_uid) {
-    document.querySelector("#desktop-feed-title").textContent = feed.name;
-    desktop_set_read_button(
-        document.querySelector("#desktop-feed-read-button"),
-        feed,
+    desktop_elements.feedTitle.textContent = feed.name;
+    desktop_set_read_button(desktop_elements.feedReadButton, feed,
         {loading: desktop_set_item_list_loading, refresh: {loading: "items"}},
     );
-    desktop_set_content("#desktop-item-list", gen_item_list(feed, {
+    desktop_set_content(desktop_elements.itemList, gen_item_list(feed, {
         selected_uid: selected_item_uid,
         item_url: item => `/feeds/${feed.uid}/items/${item.uid}`,
+        link_href: item => item.url,
         link_handler: desktop_select_item,
     }));
-}
-
-function desktop_response_error(response, data, not_found_message) {
-    switch (response.status) {
-        case 401:
-            return "Please login.";
-        case 404:
-            return not_found_message;
-        case 500:
-            return `Unexpected error: ${data.message}`;
-        default:
-            return `Unexpected response code: ${response.status}`;
-    }
 }
 
 let desktop_feeds = [];
@@ -232,7 +231,7 @@ async function desktop_refresh(opts = {}) {
             return;
         }
         if (feeds_response.status !== 200) {
-            desktop_set_error(desktop_response_error(feeds_response, feeds, "Feed not found."));
+            desktop_set_error(response_error(feeds_response, feeds, "Feed not found."));
             return;
         }
     }
@@ -240,9 +239,9 @@ async function desktop_refresh(opts = {}) {
     let status_page = selected_uid === "status";
     if (status_page) {
         desktop_render_feed_list(feeds);
-        document.querySelector("#desktop-feed-title").textContent = "Status";
-        desktop_set_read_button(document.querySelector("#desktop-feed-read-button"));
-        desktop_set_content("#desktop-item-list", gen_status_content(feeds, {
+        desktop_elements.feedTitle.textContent = "Status";
+        desktop_set_read_button(desktop_elements.feedReadButton);
+        desktop_set_content(desktop_elements.itemList, gen_status_content(feeds, {
             link_handler: desktop_refresh,
         }));
         desktop_set_item_content();
@@ -263,7 +262,7 @@ async function desktop_refresh(opts = {}) {
         return;
     }
     if (feed_response.status !== 200) {
-        desktop_set_error(desktop_response_error(feed_response, feed, "Feed not found."));
+        desktop_set_error(response_error(feed_response, feed, "Feed not found."));
         return;
     }
 
@@ -280,7 +279,7 @@ async function desktop_refresh(opts = {}) {
             return;
         }
         if (item_response.status !== 200) {
-            desktop_set_error(desktop_response_error(item_response, item_data, "Item not found."));
+            desktop_set_error(response_error(item_response, item_data, "Item not found."));
             return;
         }
         item = item_data;
@@ -305,7 +304,12 @@ async function desktop_start() {
         window.addEventListener("load", () => desktop_start().catch(start_mobile_mode), {once: true});
         return;
     }
-    if (!is_desktop_mode()) return;
+    if (!is_desktop_mode()) {
+        unload_desktop_assets();
+        start_mobile_mode();
+        return;
+    }
+    desktop_init();
     start_mode_detection();
     history.scrollRestoration = "manual";
 

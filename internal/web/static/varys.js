@@ -9,29 +9,37 @@ function is_desktop_mode() {
 function load_desktop_assets() {
     if (!is_desktop_mode()) return;
 
-    let stylesheet = document.createElement("link");
-    stylesheet.rel = "stylesheet";
-    stylesheet.href = "/static/varys-desktop.css";
+    desktop_stylesheet = document.createElement("link");
+    desktop_stylesheet.rel = "stylesheet";
+    desktop_stylesheet.href = "/static/varys-desktop.css";
     let start_mobile = () => {
-        if (stylesheet.parentNode) {
-            stylesheet.parentNode.removeChild(stylesheet);
-        }
+        unload_desktop_assets();
         start_mobile_mode();
     };
-    stylesheet.onerror = start_mobile;
-    stylesheet.onload = () => {
+    desktop_stylesheet.onerror = start_mobile;
+    desktop_stylesheet.onload = () => {
         let script = document.createElement("script");
         script.src = "/static/varys-desktop.js";
         script.onerror = start_mobile;
         script.onload = () => desktop_start().catch(start_mobile);
         document.head.append(script);
     };
-    document.head.append(stylesheet);
+    document.head.append(desktop_stylesheet);
+}
+
+let desktop_stylesheet = null;
+
+function unload_desktop_assets() {
+    desktop_stylesheet?.remove();
+    desktop_stylesheet = null;
 }
 
 load_desktop_assets();
 
 function start_mode_detection() {
+    if (mode_detection_started) return;
+    mode_detection_started = true;
+
     let desktop_query = window.matchMedia(DESKTOP_MEDIA_QUERY);
     let reload = () => window.location.reload();
     if (desktop_query.addEventListener) {
@@ -40,6 +48,8 @@ function start_mode_detection() {
         desktop_query.addListener(reload);
     }
 }
+
+let mode_detection_started = false;
 
 function get_current_state() {
     let url = window.location.pathname;
@@ -133,13 +143,6 @@ function create_element(tag, {class_name, text, children = []} = {}) {
     return element;
 }
 
-function replace_children(element, ...children) {
-    while (element.firstChild) {
-        element.removeChild(element.firstChild);
-    }
-    element.append(...children);
-}
-
 function table_row(label, value) {
     return create_element("tr", {
         children: [
@@ -212,6 +215,7 @@ function gen_item_list(feed, opts = {}) {
         item_fragment.append(gen_item(item, {
             list_view: true,
             item_url,
+            link_href: opts.link_href,
             link_handler: opts.link_handler,
             selected: item.uid === opts.selected_uid,
         }));
@@ -274,7 +278,20 @@ function gen_status_content(feeds, opts = {}) {
 }
 
 // Page state.
-function error(err) {
+function response_error(response, data, not_found_message) {
+    switch (response.status) {
+        case 401:
+            return "Please login.";
+        case 404:
+            return not_found_message || `Unexpected response code: ${response.status}`;
+        case 500:
+            return `Unexpected error: ${data.message}`;
+        default:
+            return `Unexpected response code: ${response.status}`;
+    }
+}
+
+function set_error(err) {
     console.trace(err);
     set_content(create_element("div", {class_name: "error", text: err}));
     reset_controls({breadcrumbs: true});
@@ -287,29 +304,21 @@ async function show_feeds() {
         set_loading();
         [rsp, data] = await fetch_feeds();
     } catch (err) {
-        error(`Unexpected error fetching feed list: ${err}`);
+        set_error(`Unexpected error fetching feed list: ${err}`);
         return;
     }
 
-    switch (rsp.status) {
-        case 401:
-            error("Please login.");
-            break;
-        case 500:
-            error(`Unexpected error: ${data.message}`);
-            break;
-        case 200:
-            let all_feed = data.find(feed => feed.uid === "all");
-            reset_controls({
-                breadcrumbs: true,
-                read_button: () => mark_all_feeds_as_read_and_refresh(all_feed),
-            });
-            set_content(gen_feed_list(data));
-            break;
-        default:
-            error(`Unexpected response code: ${rsp.status}`);
-            break;
+    if (rsp.status !== 200) {
+        set_error(response_error(rsp, data));
+        return;
     }
+
+    let all_feed = data.find(feed => feed.uid === "all");
+    reset_controls({
+        breadcrumbs: true,
+        read_button: () => mark_all_feeds_as_read_and_refresh(all_feed),
+    });
+    set_content(gen_feed_list(data));
 }
 
 async function show_feed(uid) {
@@ -319,31 +328,20 @@ async function show_feed(uid) {
         set_loading();
         [rsp, data] = await fetch_feed(uid);
     } catch (err) {
-        error(`Unexpected error fetching feed: ${err}`);
+        set_error(`Unexpected error fetching feed: ${err}`);
         return;
     }
 
-    switch (rsp.status) {
-        case 401:
-            error("Please login.");
-            break;
-        case 404:
-            error("Feed not found.");
-            break;
-        case 500:
-            error(`Unexpected error: ${data.message}`);
-            break;
-        case 200:
-            reset_controls({
-                breadcrumbs: {uid: data.uid, name: data.name},
-                read_button: () => mark_feed_as_read_and_refresh(data.uid, data.last_updated),
-            });
-            set_content(gen_item_list(data));
-            break;
-        default:
-            error(`Unexpected response code: ${rsp.status}`);
-            break;
+    if (rsp.status !== 200) {
+        set_error(response_error(rsp, data, "Feed not found."));
+        return;
     }
+
+    reset_controls({
+        breadcrumbs: {uid: data.uid, name: data.name},
+        read_button: () => mark_feed_as_read_and_refresh(data.uid, data.last_updated),
+    });
+    set_content(gen_item_list(data));
 }
 
 async function show_item(fuid, iuid) {
@@ -353,37 +351,26 @@ async function show_item(fuid, iuid) {
         set_loading();
         [rsp, data] = await fetch_item(fuid, iuid);
     } catch (err) {
-        error(`Unexpected error fetching item: ${err}`);
+        set_error(`Unexpected error fetching item: ${err}`);
         return;
     }
 
-    switch (rsp.status) {
-        case 401:
-            error("Please login.");
-            break;
-        case 404:
-            error("Item not found.");
-            break;
-        case 500:
-            error(`Unexpected error: ${data.message}`);
-            break;
-        case 200:
-            reset_controls({
-                breadcrumbs: {
-                    uid: fuid,
-                    name: fuid === "all" ? "All" : data.feed_name,
-                },
-                open_button: data.url,
-            });
-            set_content(gen_item(data));
-            window.scrollTo(0, 0);
-            if (!data.read) {
-                mark_item_as_read(data.feed_uid, data.uid);
-            }
-            break;
-        default:
-            error(`Unexpected response code: ${rsp.status}`);
-            break;
+    if (rsp.status !== 200) {
+        set_error(response_error(rsp, data, "Item not found."));
+        return;
+    }
+
+    reset_controls({
+        breadcrumbs: {
+            uid: fuid,
+            name: fuid === "all" ? "All" : data.feed_name,
+        },
+        open_button: data.url,
+    });
+    set_content(gen_item(data));
+    window.scrollTo(0, 0);
+    if (!data.read) {
+        mark_item_as_read(data.feed_uid, data.uid);
     }
 }
 
@@ -448,7 +435,9 @@ function gen_item(item, opts) {
             children: [item_div],
         });
         item_link.dataset.itemUid = item.uid;
-        link(item_link, opts.item_url || `/feeds/${item.feed_uid}/items/${item.uid}`, opts.link_handler);
+        let item_url = opts.item_url || `/feeds/${item.feed_uid}/items/${item.uid}`;
+        let link_href = opts.link_href ? opts.link_href(item) : item_url;
+        link(item_link, item_url, opts.link_handler, link_href);
         return item_link;
     }
 
@@ -463,7 +452,7 @@ async function refresh() {
             history.replaceState(null, "", HOME_PATH);
             refresh();
         } else {
-            error("Please login.");
+            set_error("Please login.");
         }
         return;
     }
@@ -479,7 +468,7 @@ async function refresh() {
             await show_feeds();
         }
     } else {
-        error("Please login.");
+        set_error("Please login.");
     }
 }
 
@@ -489,29 +478,21 @@ async function show_status_feeds() {
     try {
         [rsp, data] = await fetch_feeds();
     } catch (err) {
-        error(`Unexpected error fetching feed list: ${err}`);
+        set_error(`Unexpected error fetching feed list: ${err}`);
         return;
     }
 
-    switch (rsp.status) {
-        case 401:
-            error("Please login.");
-            break;
-        case 500:
-            error(`Unexpected error: ${data.message}`);
-            break;
-        case 200:
-            reset_controls({breadcrumbs: true});
-            set_content(gen_status_content(data));
-            break;
-        default:
-            error(`Unexpected response code: ${rsp.status}`);
-            break;
+    if (rsp.status !== 200) {
+        set_error(response_error(rsp, data));
+        return;
     }
+
+    reset_controls({breadcrumbs: true});
+    set_content(gen_status_content(data));
 }
 
 function set_content(...content) {
-    replace_children(document.querySelector("#content"), ...content);
+    document.querySelector("#content").replaceChildren(...content);
 }
 
 function set_loading() {
@@ -550,12 +531,12 @@ function restore_scroll_position(state) {
     }
 }
 
-function link(a, url, navigate = refresh) {
-    a.setAttribute("href", url);
+function link(a, url, navigate = refresh, href = url) {
+    a.setAttribute("href", href);
     if (a.onclick) return;
     a.onclick = e => {
         save_scroll_position();
-        history.pushState(null, "", a.href);
+        history.pushState(null, "", url);
         navigate();
         e.preventDefault();
     };
@@ -563,19 +544,17 @@ function link(a, url, navigate = refresh) {
 
 function reset_controls(config) {
     if (!config) {
-        document.querySelector("#controls").classList.add("hidden");
+        document.querySelector("#controls").hidden = true;
         return;
     }
 
-    document.querySelector("#controls").classList.remove("hidden");
+    document.querySelector("#controls").hidden = false;
 
     let breadcrumbs = document.querySelector("#breadcrumbs");
-    breadcrumbs.classList.add("hidden");
+    breadcrumbs.hidden = !config.breadcrumbs;
     if (config.breadcrumbs) {
-        breadcrumbs.classList.remove("hidden");
-
         let items = document.querySelector("#breadcrumb-items");
-        replace_children(items);
+        items.replaceChildren();
 
         let feeds_link = create_element("a", {text: "Feeds"});
         link(feeds_link, "/feeds");
@@ -595,32 +574,39 @@ function reset_controls(config) {
     }
 
     let read_button = document.querySelector("#read-button");
-    read_button.classList.add("hidden");
+    read_button.hidden = !config.read_button;
     read_button.onclick = null;
     if (config.read_button) {
-        read_button.classList.remove("hidden");
         if (typeof config.read_button === "function") {
             read_button.onclick = config.read_button;
         }
     }
 
     let open_button = document.querySelector("#open-button");
-    open_button.classList.add("hidden");
+    open_button.hidden = !config.open_button;
     if (config.open_button) {
         link(open_button, config.open_button);
         open_button.setAttribute("target", "_blank");
         open_button.setAttribute("rel", "noopener noreferrer");
-        open_button.classList.remove("hidden");
     }
 }
+
+let mobile_mode_started = false;
 
 function start_mobile_mode() {
     if (document.readyState === "loading") {
         window.addEventListener("load", start_mobile_mode, {once: true});
         return;
     }
+    if (mobile_mode_started) return;
+    mobile_mode_started = true;
 
     start_mode_detection();
+
+    window.onpopstate = async e => {
+        await refresh();
+        restore_scroll_position(e.state);
+    };
 
     let read_button = document.querySelector("#read-button");
     read_button.addEventListener("touchstart", () => { });
@@ -635,11 +621,6 @@ function start() {
     history.scrollRestoration = "auto";
     reset_controls();
     refresh();
-};
-
-window.onpopstate = async e => {
-    await refresh();
-    restore_scroll_position(e.state);
 };
 
 window.addEventListener("load", () => {

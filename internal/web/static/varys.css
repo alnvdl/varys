@@ -189,12 +189,12 @@ a {
     width: 20%;
 }
 
-#action-area > a + a {
+#action-area > .icon-button + .icon-button {
     margin-left: 32px;
     overflow: hidden;
 }
 
-.hidden {
+[hidden] {
     display: none !important;
 }
 
@@ -299,27 +299,34 @@ a {
     height: 0;
 }
 
+.icon-button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    flex: 0 0 auto;
+    font: inherit;
+    justify-content: center;
+    padding: 0;
+    transition: background-color 0.15s ease-out;
+}
+
+.icon-button:active .icon {
+    filter: var(--icon-clicked);
+}
+
+.icon-button:active {
+    background-color: var(--controls-bg-color-active);
+}
+
 .icon {
     width: var(--icon-size);
     height: var(--icon-size);
     min-width: var(--icon-size);
     min-height: var(--icon-size);
     transition: filter 0.15s ease-out;
-}
-
-#read-button,
-#open-button {
-    transition: background-color 0.15s ease-out;
-}
-
-#read-button:active .icon,
-#open-button:active .icon {
-    filter: var(--icon-clicked);
-}
-
-#read-button:active,
-#open-button:active {
-    background-color: var(--controls-bg-color-active);
 }
 
 .feed-status {
