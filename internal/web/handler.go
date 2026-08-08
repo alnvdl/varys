@@ -3,17 +3,24 @@
 package web
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
+	"text/template"
 
 	"github.com/alnvdl/varys/internal/feed"
 )
 
 //go:embed static/*
 var staticFiles embed.FS
+
+//go:embed templates/manifest.json
+var manifestTemplate string
+
+var manifestTmpl = template.Must(template.New("manifest.json").Parse(manifestTemplate))
 
 // FeedLister is the interface that the API server uses to interact with a list
 // of feeds.
@@ -52,6 +59,11 @@ func NewHandler(p *HandlerParams) *handler {
 	}{{method: "POST",
 		path:    "/login",
 		handler: h.login,
+		authn:   false,
+	}, {
+		method:  "GET",
+		path:    "/manifest.json",
+		handler: h.manifest,
 		authn:   false,
 	}, {
 		method:  "GET",
@@ -148,6 +160,22 @@ func (s *handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		writeErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
+}
+
+func (s *handler) manifest(w http.ResponseWriter, r *http.Request) {
+	var body bytes.Buffer
+	err := manifestTmpl.Execute(&body, s.p)
+	if err != nil {
+		slog.Error("cannot render manifest", slog.String("err", err.Error()))
+		writeErrorResponse(w, http.StatusInternalServerError, "cannot render manifest")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/manifest+json")
+	_, err = w.Write(body.Bytes())
+	if err != nil {
+		slog.Error("cannot write manifest", slog.String("err", err.Error()))
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -637,6 +638,72 @@ func TestStatic(t *testing.T) {
 				t.Errorf("expected Cache-Control header to be 'max-age=86400', got %v", rr.Header().Get("Cache-Control"))
 			}
 		})
+	}
+}
+
+func TestManifest(t *testing.T) {
+	handlerParams := &web.HandlerParams{
+		AccessToken: "valid-token",
+		SessionKey:  []byte("test-session-key"),
+	}
+	h := web.NewHandler(handlerParams)
+
+	req, _ := http.NewRequest("GET", "/manifest.json", nil)
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %v, got %v", http.StatusOK, rr.Code)
+	}
+
+	if contentType := rr.Header().Get("Content-Type"); contentType != "application/manifest+json" {
+		t.Errorf("expected Content-Type to be application/manifest+json, got %v", contentType)
+	}
+
+	type manifestIcon struct {
+		Source string `json:"src"`
+		Type   string `json:"type"`
+		Sizes  string `json:"sizes"`
+	}
+	type manifest struct {
+		ShortName   string         `json:"short_name"`
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		StartURL    string         `json:"start_url"`
+		Display     string         `json:"display"`
+		Icons       []manifestIcon `json:"icons"`
+	}
+	var actual manifest
+	if err := json.NewDecoder(rr.Body).Decode(&actual); err != nil {
+		t.Fatalf("could not decode manifest: %v", err)
+	}
+
+	expected := manifest{
+		ShortName:   "Varys",
+		Name:        "Varys",
+		Description: "Varys is a barebones feed reader.",
+		StartURL:    "/#token:valid-token",
+		Display:     "standalone",
+		Icons: []manifestIcon{{
+			Source: "/static/icon16.png",
+			Type:   "image/png",
+			Sizes:  "16x16",
+		}, {
+			Source: "/static/icon48.png",
+			Type:   "image/png",
+			Sizes:  "48x48",
+		}, {
+			Source: "/static/icon192.png",
+			Type:   "image/png",
+			Sizes:  "192x192",
+		}, {
+			Source: "/static/icon.svg",
+			Type:   "image/svg+xml",
+			Sizes:  "any",
+		}},
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected manifest %#v, got %#v", expected, actual)
 	}
 }
 
