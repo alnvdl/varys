@@ -21,16 +21,16 @@ type RSS struct {
 }
 
 type RSSItem struct {
-	ID          string   `xml:"id"`
-	GUID        string   `xml:"guid"`
-	Link        string   `xml:"link"`
-	Title       string   `xml:"title"`
-	PubDate     string   `xml:"pubDate"`
-	Date        string   `xml:"date"`
-	Creator     []string `xml:"creator"`
-	Authors     []string `xml:"author>name"`
-	Encoded     string   `xml:"encoded"`
-	Description string   `xml:"description"`
+	ID           string   `xml:"id"`
+	GUID         string   `xml:"guid"`
+	Link         string   `xml:"link"`
+	Title        string   `xml:"title"`
+	PubDate      string   `xml:"pubDate"`
+	Date         string   `xml:"date"`
+	Creator      []string `xml:"creator"`
+	Authors      []string `xml:"author>name"`
+	Encoded      string   `xml:"encoded"`
+	Descriptions []string `xml:"description"`
 }
 
 type Atom struct {
@@ -55,6 +55,14 @@ type AtomEntry struct {
 	Summary   string   `xml:"summary"`
 }
 
+type xmlParams struct {
+	AddLineBreaks bool `json:"add_line_breaks"`
+}
+
+func (p *xmlParams) Validate() error {
+	return nil
+}
+
 func tryParseFeed(data []byte, v any) error {
 	r := bytes.NewReader(data)
 	dec := xml.NewDecoder(r)
@@ -62,7 +70,12 @@ func tryParseFeed(data []byte, v any) error {
 	return dec.Decode(&v)
 }
 
-func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
+func parseXML(data []byte, params any) ([]feed.RawItem, error) {
+	var p xmlParams
+	if err := feed.ParseParams(params, &p); err != nil {
+		return nil, fmt.Errorf("cannot parse XML feed params: %v", err)
+	}
+
 	var feedItems []feed.RawItem
 
 	rss := RSS{}
@@ -75,11 +88,15 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 		}
 		for pos, item := range items {
 			resolvedItemURL := resolveURL(item.Link, baseURL, nil)
+			content := coalesce(item.Encoded, strings.Join(item.Descriptions, "\n"))
+			if p.AddLineBreaks {
+				content = addLineBreaks(content)
+			}
 			feedItems = append(feedItems, feed.RawItem{
 				URL:      urlToString(resolvedItemURL),
 				Title:    strings.TrimSpace(item.Title),
 				Authors:  strings.TrimSpace(strings.Join(append(item.Authors, item.Creator...), ", ")),
-				Content:  silentlySanitizeHTML(coalesce(item.Encoded, item.Description), resolvedItemURL),
+				Content:  silentlySanitizeHTML(content, resolvedItemURL),
 				Position: pos,
 			})
 		}
@@ -104,11 +121,15 @@ func parseXML(data []byte, _ any) ([]feed.RawItem, error) {
 				itemURL = entry.Links[0].Href
 			}
 			resolvedItemURL := resolveURL(itemURL, baseURL, nil)
+			content := coalesce(entry.Content, entry.Summary)
+			if p.AddLineBreaks {
+				content = addLineBreaks(content)
+			}
 			feedItems = append(feedItems, feed.RawItem{
 				URL:      urlToString(resolvedItemURL),
 				Title:    strings.TrimSpace(entry.Title),
 				Authors:  strings.TrimSpace(strings.Join(entry.Authors, ", ")),
-				Content:  silentlySanitizeHTML(coalesce(entry.Content, entry.Summary), resolvedItemURL),
+				Content:  silentlySanitizeHTML(content, resolvedItemURL),
 				Position: pos,
 			})
 		}
@@ -139,4 +160,8 @@ func coalesce(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func addLineBreaks(input string) string {
+	return strings.ReplaceAll(input, "\n", "<br>")
 }

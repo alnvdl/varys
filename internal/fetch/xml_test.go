@@ -9,12 +9,18 @@ import (
 
 func TestParseXML(t *testing.T) {
 	tests := []struct {
-		desc string
-		xml  string
+		desc   string
+		xml    string
+		params any
 
 		expected []feed.RawItem
 		err      string
 	}{{
+		desc:   "error: corrupted params",
+		xml:    "",
+		params: "{",
+		err:    "cannot parse XML feed params: cannot unmarshal: json: cannot unmarshal string into Go value of type fetch.xmlParams",
+	}, {
 		desc: "RSS with 0 items",
 		xml: `
 			<rss>
@@ -341,6 +347,61 @@ func TestParseXML(t *testing.T) {
 			Position: 0,
 		}},
 	}, {
+		desc: "RSS with add_line_breaks and surrounding line breaks",
+		params: map[string]any{
+			"add_line_breaks": true,
+		},
+		xml: `
+			<rss>
+				<channel>
+					<item>
+						<description>
+						first line
+						second line
+						</description>
+				</item>
+			</channel>
+		</rss>`,
+		expected: []feed.RawItem{{
+			Content:  "<br/>\t\t\t\t\t\tfirst line<br/>\t\t\t\t\t\tsecond line<br/>",
+			Position: 0,
+		}},
+	}, {
+		desc: "RSS combines descriptions",
+		xml: `
+			<rss xmlns:media="http://search.yahoo.com/mrss/" xmlns:other="urn:other">
+				<channel>
+					<item>
+						<description>Full description</description>
+						<media:description>Short image caption</media:description>
+						<description>Second description</description>
+						<other:description>Another short description</other:description>
+					</item>
+				</channel>
+			</rss>`,
+		expected: []feed.RawItem{{
+			Content:  "Full description\nShort image caption\nSecond description\nAnother short description",
+			Position: 0,
+		}},
+	}, {
+		desc: "Atom with add_line_breaks and summary fallback",
+		params: map[string]any{
+			"add_line_breaks": true,
+		},
+		xml: `
+			<feed>
+				<entry>
+					<summary>
+					first line
+					second line
+					</summary>
+				</entry>
+			</feed>`,
+		expected: []feed.RawItem{{
+			Content:  "<br/>\t\t\t\t\tfirst line<br/>\t\t\t\t\tsecond line<br/>",
+			Position: 0,
+		}},
+	}, {
 		desc:     "malformed XML",
 		xml:      `<>`,
 		expected: []feed.RawItem{},
@@ -350,7 +411,7 @@ func TestParseXML(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			data := []byte(test.xml)
-			items, err := fetch.ParseXML(data, nil)
+			items, err := fetch.ParseXML(data, test.params)
 			if err != nil {
 				if test.err == "" {
 					t.Errorf("unexpected error: %v", err)
