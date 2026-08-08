@@ -499,6 +499,7 @@ function set_content(...content) {
 }
 
 function set_loading() {
+    reset_controls();
     let div = create_element("div", {
         class_name: "loading",
         children: [create_element("div", {class_name: "spinner"})],
@@ -547,7 +548,9 @@ function link(a, url, navigate = refresh, href = url) {
 
 function reset_controls(config) {
     if (!config) {
-        document.querySelector("#controls").hidden = true;
+        document.querySelector("#controls").hidden = false;
+        document.querySelector("#read-button").hidden = true;
+        document.querySelector("#open-button").hidden = true;
         return;
     }
 

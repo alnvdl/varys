@@ -172,6 +172,13 @@ a {
     font-size: calc(1.2 * var(--font-size));
 }
 
+.breadcrumb-item:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #breadcrumbs {
     display: flex;
     width: 80%;
@@ -200,7 +207,8 @@ a {
 
 .breadcrumbs {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
     padding: 0 0;
     list-style: none;
     margin: 0;
