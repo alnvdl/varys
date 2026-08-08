@@ -190,8 +190,8 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 
-// SortedItems returns the items in the feed sorted by timestamp, position, URL
-// and then feed UID in descending order.
+// SortedItems returns the items in the feed sorted by timestamp, position,
+// URL and then feed UID in descending order.
 func (f *Feed) SortedItems() []Item {
 	var sortedItems []Item
 	for _, item := range f.Items {

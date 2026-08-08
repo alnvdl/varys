@@ -48,9 +48,9 @@ type Item struct {
 	// Read is true if the item was marked as read by the user.
 	Read bool `json:"read"`
 
-	// A backlink to the feed is not stored code and tests a bit simpler. If
-	// needed, callers may lookup the feed by its UID in the list of feeds or
-	// use [AllItems] to iterate over (*Feed, *Item) pairs.
+	// A backlink to the feed is not stored code and tests a bit simpler.
+	// If needed, callers may lookup the feed by its UID in the list of feeds
+	// or use [AllItems] to iterate over (*Feed, *Item) pairs.
 }
 
 // ItemSummary is the external representation of the item (e.g., for presenting
@@ -64,9 +64,9 @@ type ItemSummary struct {
 	// summary, not a virtual feed aggregating multiple feeds).
 	FeedUID string `json:"feed_uid"`
 
-	// FeedName is the name of the feed that this item belongs to. May be missing
-	// in certain cases (e.g., this item summary is part of a single feed
-	// summary, not a virtual feed aggregating multiple feeds).
+	// FeedName is the name of the feed that this item belongs to. May be
+	// missing in certain cases (e.g., this item summary is part of a single
+	// feed summary, not a virtual feed aggregating multiple feeds).
 	FeedName string `json:"feed_name"`
 
 	// URL is the URL of the item. It comes directly from the feed and is not
