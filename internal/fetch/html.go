@@ -22,12 +22,14 @@ type htmlParams struct {
 	AllowedPrefixes []string          `json:"allowed_prefixes"`
 }
 
+const unknownTitle = "Unknown title"
+
 func (p *htmlParams) Validate() error {
 	if p.ContainerTag == "" {
 		return errors.New("container_tag cannot be empty")
 	}
-	if p.TitlePos < 0 {
-		return errors.New("title_pos cannot be negative")
+	if p.TitlePos < -1 {
+		return errors.New("title_pos cannot be less than -1")
 	}
 	if p.BaseURL == "" {
 		return errors.New("base_url cannot be empty")
@@ -185,21 +187,35 @@ func parseHTML(data []byte, params any) ([]feed.RawItem, error) {
 
 	var rawItems []feed.RawItem
 	for _, ci := range cis {
-		title := "Unknown title"
-		if p.TitlePos < len(ci.parts) {
+		title := unknownTitle
+		if p.TitlePos == -1 {
+			title = longestNonImagePart(ci.parts)
+			if title == "" {
+				title = unknownTitle
+			}
+		} else if p.TitlePos < len(ci.parts) {
 			title = ci.parts[p.TitlePos]
-		} else if len(ci.parts) > 0 {
-			title = ci.parts[0]
 		}
 		rawItems = append(rawItems, feed.RawItem{
 			URL:      ci.url,
 			Title:    title,
-			Content:  silentlySanitizeHTML(strings.Join(ci.parts, "<br/>"), nil),
+			Content:  silentlySanitizeHTML(inferParagraphs(strings.Join(ci.parts, "\n")), nil),
 			Position: ci.position,
 		})
 	}
 
 	return rawItems, nil
+}
+
+func longestNonImagePart(parts []string) string {
+	var longest string
+	for _, part := range parts {
+		if strings.HasPrefix(strings.TrimSpace(part), "<img") || len(part) <= len(longest) {
+			continue
+		}
+		longest = part
+	}
+	return longest
 }
 
 // matchAttrs returns true if the given node n has all the attributes specified

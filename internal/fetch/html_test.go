@@ -34,18 +34,18 @@ func TestParseHTML(t *testing.T) {
 		},
 		err: "cannot parse HTML feed params: cannot validate: container_tag cannot be empty",
 	}, {
-		desc: "error: title position cannot be negative",
+		desc: "error: title position cannot be less than -1",
 		html: `<html><body>
 			<div class="target-container"></div>
 		</body></html>`,
 		params: map[string]any{
 			"container_tag":    "div",
 			"container_attrs":  map[string]string{"class": "target-container"},
-			"title_pos":        -1,
+			"title_pos":        -2,
 			"base_url":         "https://example.com",
 			"allowed_prefixes": []string{"https://example.com"},
 		},
-		err: "cannot parse HTML feed params: cannot validate: title_pos cannot be negative",
+		err: "cannot parse HTML feed params: cannot validate: title_pos cannot be less than -1",
 	}, {
 		desc: "error: base URL cannot be empty",
 		html: `<html><body>
@@ -129,11 +129,30 @@ func TestParseHTML(t *testing.T) {
 		expected: []feed.RawItem{{
 			URL:     "https://example.com/url1",
 			Title:   "Title 1",
-			Content: "Title 1<br/>Subtitle 1",
+			Content: "<p>Title 1</p><p>Subtitle 1</p>",
 		}, {
 			URL:     "https://example.com/url2",
 			Title:   "Title 2",
-			Content: `Title 2<br/><img src="https://example.com/static/image.png"/>`,
+			Content: `<p>Title 2</p><p><img src="https://example.com/static/image.png"/></p>`,
+		}},
+	}, {
+		desc: "success: title_pos -1 picks the longest non-image part",
+		html: `<html><body>
+			<div class="target-container">
+				<a href="/url1"><img src="https://example.com/static/image.png" />Short title<span>A much longer title</span></a>
+			</div>
+		</body></html>`,
+		params: map[string]any{
+			"container_tag":    "div",
+			"container_attrs":  map[string]string{"class": "target-container"},
+			"title_pos":        -1,
+			"base_url":         "https://example.com",
+			"allowed_prefixes": []string{"https://example.com"},
+		},
+		expected: []feed.RawItem{{
+			URL:     "https://example.com/url1",
+			Title:   "A much longer title",
+			Content: `<p><img src="https://example.com/static/image.png"/></p><p>Short title</p><p>A much longer title</p>`,
 		}},
 	}, {
 		desc: "success: there are no parts in the content and title_pos is beyond the number of parts",
@@ -152,8 +171,8 @@ func TestParseHTML(t *testing.T) {
 		},
 		expected: []feed.RawItem{{
 			URL:     "https://example.com/url1",
-			Title:   "Title 1",
-			Content: "Title 1",
+			Title:   "Unknown title",
+			Content: "<p>Title 1</p>",
 		}, {
 			URL:     "https://example.com/url2",
 			Title:   "Unknown title",
@@ -176,7 +195,7 @@ func TestParseHTML(t *testing.T) {
 		expected: []feed.RawItem{{
 			URL:     "https://example.com/url1",
 			Title:   "Title",
-			Content: `Title<br/><img src=""/>`,
+			Content: `<p>Title</p><p><img src=""/></p>`,
 		}},
 	}}
 

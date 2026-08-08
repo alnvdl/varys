@@ -66,13 +66,13 @@ pages.
     "container_attrs": {
       "class": "news-container"
     },
-    // position identifies the position of the title in the extracted content.
-    // Cannot be negative.
+      // title_pos identifies the position of the title in the extracted
+      // content. Set to -1 to pick the longest non-image part.
     "title_pos": 0,
     // base_url is used for resolving relative URLs found in HTML content.
     "base_url": "https://example.com/",
-    // allowed_prefixes define the only acceptable prefixes for links identified
-    // by the HTML feed parser after resolving them with base_url.
+    // allowed_prefixes define the only acceptable prefixes for links
+    // identified by the HTML feed parser after resolving them with base_url.
     "allowed_prefixes": [
       "https://example.com/news/"
     ],
