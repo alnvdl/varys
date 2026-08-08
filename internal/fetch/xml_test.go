@@ -347,9 +347,9 @@ func TestParseXML(t *testing.T) {
 			Position: 0,
 		}},
 	}, {
-		desc: "RSS with add_line_breaks and surrounding line breaks",
+		desc: "rss with infer_paragraphs",
 		params: map[string]any{
-			"add_line_breaks": true,
+			"infer_paragraphs": true,
 		},
 		xml: `
 			<rss>
@@ -363,7 +363,7 @@ func TestParseXML(t *testing.T) {
 			</channel>
 		</rss>`,
 		expected: []feed.RawItem{{
-			Content:  "<br/>\t\t\t\t\t\tfirst line<br/>\t\t\t\t\t\tsecond line<br/>",
+			Content:  "<p>first line</p><p>second line</p>",
 			Position: 0,
 		}},
 	}, {
@@ -384,9 +384,9 @@ func TestParseXML(t *testing.T) {
 			Position: 0,
 		}},
 	}, {
-		desc: "Atom with add_line_breaks and summary fallback",
+		desc: "atom with infer_paragraphs",
 		params: map[string]any{
-			"add_line_breaks": true,
+			"infer_paragraphs": true,
 		},
 		xml: `
 			<feed>
@@ -398,7 +398,7 @@ func TestParseXML(t *testing.T) {
 				</entry>
 			</feed>`,
 		expected: []feed.RawItem{{
-			Content:  "<br/>\t\t\t\t\tfirst line<br/>\t\t\t\t\tsecond line<br/>",
+			Content:  "<p>first line</p><p>second line</p>",
 			Position: 0,
 		}},
 	}, {

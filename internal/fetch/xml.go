@@ -56,7 +56,7 @@ type AtomEntry struct {
 }
 
 type xmlParams struct {
-	AddLineBreaks bool `json:"add_line_breaks"`
+	InferParagraphs bool `json:"infer_paragraphs"`
 }
 
 func (p *xmlParams) Validate() error {
@@ -89,8 +89,8 @@ func parseXML(data []byte, params any) ([]feed.RawItem, error) {
 		for pos, item := range items {
 			resolvedItemURL := resolveURL(item.Link, baseURL, nil)
 			content := coalesce(item.Encoded, strings.Join(item.Descriptions, "\n"))
-			if p.AddLineBreaks {
-				content = addLineBreaks(content)
+			if p.InferParagraphs {
+				content = inferParagraphs(content)
 			}
 			feedItems = append(feedItems, feed.RawItem{
 				URL:      urlToString(resolvedItemURL),
@@ -122,8 +122,8 @@ func parseXML(data []byte, params any) ([]feed.RawItem, error) {
 			}
 			resolvedItemURL := resolveURL(itemURL, baseURL, nil)
 			content := coalesce(entry.Content, entry.Summary)
-			if p.AddLineBreaks {
-				content = addLineBreaks(content)
+			if p.InferParagraphs {
+				content = inferParagraphs(content)
 			}
 			feedItems = append(feedItems, feed.RawItem{
 				URL:      urlToString(resolvedItemURL),
@@ -162,6 +162,14 @@ func coalesce(values ...string) string {
 	return ""
 }
 
-func addLineBreaks(input string) string {
-	return strings.ReplaceAll(input, "\n", "<br>")
+func inferParagraphs(input string) string {
+	lines := strings.Split(input, "\n")
+	paragraphs := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			paragraphs = append(paragraphs, "<p>"+line+"</p>")
+		}
+	}
+	return strings.Join(paragraphs, "")
 }

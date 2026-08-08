@@ -39,6 +39,9 @@ This type of feed can be used with traditional RSS or Atom XML feeds.
   "name": "Example XML Feed",
   "url": "https://example.com/rss",
   "params": {
+      // infer_paragraphs converts each non-blank line of content into a
+      // paragraph.
+      "infer_paragraphs": true,
     // max_items is the optional maximum number of items to keep in the feed.
     // Defaults to a number between 100 and 200 based on the feed data.
     "max_items": 50
