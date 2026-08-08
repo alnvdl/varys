@@ -1,8 +1,3 @@
-:root {
-    --controls-height: 52px;
-    --font-size: 15px;
-}
-
 html,
 body {
     height: 100%;
@@ -35,11 +30,11 @@ body {
     justify-content: space-between;
     box-sizing: border-box;
     height: var(--controls-height);
-    padding: 0 16px;
+    padding: 0 var(--font-size);
     background-color: var(--controls-bg-color);
     font-weight: bold;
     line-height: normal;
-    gap: 8px;
+    gap: calc(0.5 * var(--font-size));
 }
 
 .desktop-control-title {
@@ -76,20 +71,20 @@ body {
     height: calc(100vh - var(--controls-height));
     height: calc(100dvh - var(--controls-height));
     overflow-y: auto;
-    padding: 8px 16px 16px 16px;
+    padding: calc(0.5 * var(--font-size)) var(--font-size) var(--font-size) var(--font-size);
 }
 
 .desktop-panel-content .feed-list {
-    margin: 0 -16px;
+    margin: 0 calc(-1 * var(--font-size));
 }
 
 .desktop-panel-content .feed-list > li {
-    padding-bottom: 0;
+    padding-bottom: calc(0.2 * var(--font-size));
 }
 
 .desktop-panel-content .feed-list > li > a {
     display: block;
-    padding: 8px 16px;
+    padding: calc(0.5 * var(--font-size)) var(--font-size);
 }
 
 .desktop-panel-content .feed-list > li.feed-selected > a,
@@ -98,12 +93,12 @@ body {
 }
 
 .desktop-panel-content .item-list {
-    margin: 0 -16px;
+    margin: 0 calc(-1 * var(--font-size));
 }
 
 .desktop-panel-content .item-link {
     display: block;
-    padding: 8px 16px;
+    padding: calc(0.5 * var(--font-size)) var(--font-size);
 }
 
 .desktop-panel-content .item-summary {
@@ -132,7 +127,7 @@ body {
 }
 
 #desktop-item-content > .item-content {
-    margin: 0;
+    margin-top: 0;
 }
 
 #desktop-item-content > .item-content :first-child {

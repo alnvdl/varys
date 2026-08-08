@@ -1,6 +1,6 @@
 const TOKEN_PREFIX = "token:";
 const HOME_PATH = "/feeds/all";
-const DESKTOP_MEDIA_QUERY = "(min-width: 1280px)";
+const DESKTOP_MEDIA_QUERY = "(min-width: 1275px)";
 
 function is_desktop_mode() {
     return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
