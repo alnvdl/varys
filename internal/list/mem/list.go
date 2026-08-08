@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 	"log/slog"
 	"maps"
 	"os"
@@ -20,7 +19,6 @@ import (
 	"github.com/alnvdl/varys/internal/feed"
 	"github.com/alnvdl/varys/internal/fetch"
 	"github.com/alnvdl/varys/internal/list"
-	"github.com/alnvdl/varys/internal/timeutil"
 )
 
 // List is a feed list that is kept in memory and optionally backed by a
@@ -115,9 +113,9 @@ func (l *List) Summary() []*feed.FeedSummary {
 
 	i := 1
 	summaries := make([]*feed.FeedSummary, len(l.feeds)+1)
-	summaries[0] = allFeed(maps.Values(l.feeds), false)
+	summaries[0] = allFeed(l.feeds, false)
 	for _, feed := range l.feeds {
-		summaries[i] = feed.Summary(false, nil)
+		summaries[i] = feed.Summary(false)
 		i++
 	}
 
@@ -135,11 +133,11 @@ func (l *List) FeedSummary(uid string) *feed.FeedSummary {
 	defer l.muFeeds.Unlock()
 
 	if uid == "all" {
-		return allFeed(maps.Values(l.feeds), true)
+		return allFeed(l.feeds, true)
 	}
 
 	if feed, ok := l.feeds[uid]; ok {
-		return feed.Summary(true, nil)
+		return feed.Summary(true)
 	}
 
 	return nil
@@ -304,19 +302,8 @@ func (l *List) Close() {
 // allFeed returns the feed summary for the virtual feed containing all items
 // from the given feeds. If withItems is true, it includes the items in the
 // feed.
-func allFeed(feeds iter.Seq[*feed.Feed], withItems bool) *feed.FeedSummary {
-	allFeed := &feed.Feed{
-		Name:            "All",
-		LastRefreshedAt: timeutil.Now(),
-		Items:           make(map[string]*feed.Item),
-	}
-	itemMapper := make(map[string]*feed.Feed)
-	for feed := range feeds {
-		for _, item := range feed.Items {
-			allFeed.Items[item.UID()] = item
-			itemMapper[item.UID()] = feed
-		}
-	}
+func allFeed(feeds map[string]*feed.Feed, withItems bool) *feed.FeedSummary {
+	allFeed := feed.NewVirtualFeed("All", feed.AllItems(maps.Values(feeds)))
 	allFeed.Prune(500, 0)
-	return allFeed.Summary(withItems, itemMapper)
+	return allFeed.Summary(withItems)
 }

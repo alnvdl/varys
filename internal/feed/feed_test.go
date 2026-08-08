@@ -2,6 +2,7 @@ package feed_test
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 	"time"
 
@@ -466,14 +467,14 @@ func TestSummary(t *testing.T) {
 			"feed1": {
 				Name: "Feed 1",
 				Items: map[string]*feed.Item{
-					"url1": {RawItem: feed.RawItem{URL: "url1", Title: "Title 1"}, Timestamp: now, Read: true, FeedUID: "feed1"},
+					feed.UID("url1"): {RawItem: feed.RawItem{URL: "url1", Title: "Title 1"}, Timestamp: now, Read: true, FeedUID: "feed1"},
 				},
 				LastRefreshedAt: now,
 			},
 			"feed2": {
 				Name: "Feed 2",
 				Items: map[string]*feed.Item{
-					"url2": {RawItem: feed.RawItem{URL: "url2", Title: "Title 2"}, Timestamp: timeutil.HoursAgo(now, 1), Read: false, FeedUID: "feed2"},
+					feed.UID("url2"): {RawItem: feed.RawItem{URL: "url2", Title: "Title 2"}, Timestamp: timeutil.HoursAgo(now, 1), Read: false, FeedUID: "feed2"},
 				},
 				LastRefreshedAt: now,
 			},
@@ -498,25 +499,13 @@ func TestSummary(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var f *feed.Feed
-			var itemMapper map[string]*feed.Feed
 			if test.virtualFeed != "" {
-				f = &feed.Feed{
-					Name:            test.virtualFeed,
-					Items:           make(map[string]*feed.Item),
-					LastRefreshedAt: now,
-				}
-				itemMapper = make(map[string]*feed.Feed)
-				for _, feed := range test.feeds {
-					for _, item := range feed.Items {
-						f.Items[item.UID()] = item
-						itemMapper[item.UID()] = feed
-					}
-				}
+				f = feed.NewVirtualFeed(test.virtualFeed, feed.AllItems(maps.Values(test.feeds)))
 			} else {
 				f = test.feeds[test.realFeed]
 			}
 
-			summary := f.Summary(test.withItems, itemMapper)
+			summary := f.Summary(test.withItems)
 			if summary.UID != test.expectedSummary.UID ||
 				summary.Name != test.expectedSummary.Name ||
 				summary.ItemCount != test.expectedSummary.ItemCount ||

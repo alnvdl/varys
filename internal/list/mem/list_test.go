@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"testing"
 
 	"github.com/alnvdl/varys/internal/feed"
@@ -221,6 +220,7 @@ func TestListFeedSummary(t *testing.T) {
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {
+						FeedUID:   "feed1",
 						RawItem:   feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"},
 						Timestamp: 2,
 					},
@@ -232,6 +232,7 @@ func TestListFeedSummary(t *testing.T) {
 				URL:  "http://example.com/feed2",
 				Items: map[string]*feed.Item{
 					"item2": {
+						FeedUID:   "feed2",
 						RawItem:   feed.RawItem{URL: "http://example.com/item2", Title: "Item 2"},
 						Timestamp: 1,
 					},
@@ -568,7 +569,7 @@ func TestAllFeed(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			summary := mem.AllFeed(maps.Values(test.feeds), test.withItems)
+			summary := mem.AllFeed(test.feeds, test.withItems)
 			if summary.UID != test.expectedSummary.UID ||
 				summary.Name != test.expectedSummary.Name ||
 				summary.ItemCount != test.expectedSummary.ItemCount ||
@@ -588,6 +589,51 @@ func TestAllFeed(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAllFeedConsistency(t *testing.T) {
+	// This test verifies that the all feed summary is consistent across
+	// multiple calls, even when the underlying feeds have items with the same
+	// timestamp, position and URL.
+	t.Parallel()
+	itemURL := "http://example.com/item"
+	feeds := map[string]*feed.Feed{
+		"feed1": {
+			Name: "Feed 1",
+			URL:  "http://example.com/feed1",
+			Items: map[string]*feed.Item{
+				feed.UID(itemURL): {
+					FeedUID: "feed1",
+					RawItem: feed.RawItem{URL: itemURL, Title: "Item"},
+					Read:    false,
+				},
+			},
+		},
+		"feed2": {
+			Name: "Feed 2",
+			URL:  "http://example.com/feed2",
+			Items: map[string]*feed.Item{
+				feed.UID(itemURL): {
+					FeedUID: "feed2",
+					RawItem: feed.RawItem{URL: itemURL, Title: "Item"},
+					Read:    true,
+				},
+			},
+		},
+	}
+
+	for i := range 100 {
+		summary := mem.AllFeed(feeds, true)
+		if summary.ItemCount != 2 || summary.ReadCount != 1 || len(summary.Items) != 2 {
+			t.Fatalf("expected one read item in run %d, got %#v", i, summary)
+		}
+		if summary.Items[0].Read != false {
+			t.Fatalf("expected first item to be unread in run %d, got %#v", i, summary)
+		}
+		if summary.Items[1].Read != true {
+			t.Fatalf("expected second item to be read in run %d, got %#v", i, summary)
+		}
 	}
 }
 
@@ -736,6 +782,54 @@ func TestListMarkRead(t *testing.T) {
 				URL:  "http://example.com/feed1",
 				Items: map[string]*feed.Item{
 					"item1": {RawItem: feed.RawItem{URL: "http://example.com/item1", Title: "Item 1"}, Read: true},
+				},
+			},
+		},
+	}, {
+		desc: "feed exists and item with the same UID exists in another feed",
+		feeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {
+				Name: "Feed 1",
+				URL:  "http://example.com/feed1",
+				Items: map[string]*feed.Item{
+					feed.UID("http://example.com/item"): {
+						RawItem: feed.RawItem{URL: "http://example.com/item", Title: "Item"},
+					},
+				},
+			},
+			feed.UID("http://example.com/feed2"): {
+				Name: "Feed 2",
+				URL:  "http://example.com/feed2",
+				Items: map[string]*feed.Item{
+					feed.UID("http://example.com/item"): {
+						RawItem: feed.RawItem{URL: "http://example.com/item", Title: "Item"},
+					},
+				},
+			},
+		},
+		fuid:           feed.UID("http://example.com/feed1"),
+		iuid:           feed.UID("http://example.com/item"),
+		before:         0,
+		expectedResult: true,
+		expectedFeeds: map[string]*feed.Feed{
+			feed.UID("http://example.com/feed1"): {
+				Name: "Feed 1",
+				URL:  "http://example.com/feed1",
+				Items: map[string]*feed.Item{
+					feed.UID("http://example.com/item"): {
+						RawItem: feed.RawItem{URL: "http://example.com/item", Title: "Item"},
+						Read:    true,
+					},
+				},
+			},
+			feed.UID("http://example.com/feed2"): {
+				Name: "Feed 2",
+				URL:  "http://example.com/feed2",
+				Items: map[string]*feed.Item{
+					feed.UID("http://example.com/item"): {
+						RawItem: feed.RawItem{URL: "http://example.com/item", Title: "Item"},
+						Read:    false,
+					},
 				},
 			},
 		},

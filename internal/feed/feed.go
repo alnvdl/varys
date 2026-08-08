@@ -3,10 +3,14 @@
 package feed
 
 import (
+	"cmp"
 	"errors"
+	"iter"
 	"log/slog"
 	"sort"
 	"strings"
+
+	"github.com/alnvdl/varys/internal/timeutil"
 )
 
 const (
@@ -42,6 +46,11 @@ type Feed struct {
 	// LastRefreshError is the last error that occurred when refreshing the
 	// feed.
 	LastRefreshError string `json:"error"`
+
+	// itemFeeds is used to map items to their original feeds in case this feed
+	// is a virtual feed aggregating items from multiple feeds. The key should
+	// be a combination of the feed UID and the item UID.
+	itemFeeds map[string]*Feed `json:"-"`
 }
 
 // FeedSummary is the external representation of the feed (e.g., for presenting
@@ -79,6 +88,8 @@ type FeedSummary struct {
 
 func (f *Feed) UID() string {
 	if f.URL == "" {
+		// TODO: the UID should be safe for inclusion in URLs. One idea is to
+		// remove anything that is not [a-z].
 		return strings.ToLower(f.Name)
 	}
 	return UID(f.URL)
@@ -179,14 +190,20 @@ func (f *Feed) Refresh(items []RawItem, ts int64, fetchErr error) {
 	log.Info("feed refreshed", slog.Int("nFeedItems", len(f.Items)))
 }
 
-// SortedItems returns the items in the feed sorted by timestamp, position and
-// then URL in descending order.
+// SortedItems returns the items in the feed sorted by timestamp, position, URL
+// and then feed UID in descending order.
 func (f *Feed) SortedItems() []Item {
 	var sortedItems []Item
 	for _, item := range f.Items {
 		sortedItems = append(sortedItems, *item)
 	}
 	sort.Slice(sortedItems, func(i, j int) bool {
+		if sortedItems[i].Timestamp == sortedItems[j].Timestamp &&
+			sortedItems[i].Position == sortedItems[j].Position &&
+			sortedItems[i].URL == sortedItems[j].URL {
+			return sortedItems[i].FeedUID < sortedItems[j].FeedUID
+		}
+
 		if sortedItems[i].Timestamp == sortedItems[j].Timestamp &&
 			sortedItems[i].Position == sortedItems[j].Position {
 			return sortedItems[i].URL < sortedItems[j].URL
@@ -213,7 +230,7 @@ func (f *Feed) MarkAllRead(before int64) {
 // Summary returns a summary of the feed. If withItems is true, it includes
 // the items in the feed. itemMapper should usually be nil; it's only used in
 // special cases when building virtual feeds containing items from other feeds.
-func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary {
+func (f *Feed) Summary(withItems bool) *FeedSummary {
 	items := f.SortedItems()
 	var readCount int
 	var lastItemTimestamp int64
@@ -229,10 +246,7 @@ func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary
 	var itemSummaries []*ItemSummary
 	if withItems {
 		for _, item := range items {
-			feed := f
-			if itemMapper != nil {
-				feed = itemMapper[item.UID()]
-			}
+			feed := cmp.Or(f.itemFeeds[virtualItemKey(item.FeedUID, item.UID())], f)
 			itemSummaries = append(itemSummaries, item.Summary(feed, false))
 		}
 	}
@@ -248,4 +262,35 @@ func (f *Feed) Summary(withItems bool, itemMapper map[string]*Feed) *FeedSummary
 		ReadCount:   readCount,
 		LastItem:    lastItemTimestamp,
 	}
+}
+
+func AllItems(feeds iter.Seq[*Feed]) iter.Seq2[*Feed, *Item] {
+	return func(yield func(*Feed, *Item) bool) {
+		for feed := range feeds {
+			for _, item := range feed.Items {
+				if !yield(feed, item) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func virtualItemKey(feedUID, itemUID string) string {
+	return feedUID + ":" + itemUID
+}
+
+func NewVirtualFeed(name string, items iter.Seq2[*Feed, *Item]) *Feed {
+	f := &Feed{
+		Name:            name,
+		LastRefreshedAt: timeutil.Now(),
+		Items:           make(map[string]*Item),
+		itemFeeds:       make(map[string]*Feed),
+	}
+	for feed, item := range items {
+		key := virtualItemKey(item.FeedUID, item.UID())
+		f.Items[key] = item
+		f.itemFeeds[key] = feed
+	}
+	return f
 }
