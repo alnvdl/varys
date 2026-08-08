@@ -87,6 +87,8 @@ type FeedSummary struct {
 }
 
 func (f *Feed) UID() string {
+	// Virtual feeds don't have URLs: in that case, the name of the feed in
+	// lower-case is used as its UID.
 	if f.URL == "" {
 		// TODO: the UID should be safe for inclusion in URLs. One idea is to
 		// remove anything that is not [a-z].
@@ -280,6 +282,8 @@ func virtualItemKey(feedUID, itemUID string) string {
 	return feedUID + ":" + itemUID
 }
 
+// NewVirtualFeed creates a [Feed] that is not backed by a real feed, but
+// instead contains items sourced from other feeds.
 func NewVirtualFeed(name string, items iter.Seq2[*Feed, *Item]) *Feed {
 	f := &Feed{
 		Name:            name,
