@@ -29,6 +29,10 @@ function desktop_set_panel_loading(...elements) {
 }
 
 function desktop_set_loading() {
+    desktop_elements.feedTitle.textContent = "...";
+    desktop_elements.itemTitle.textContent = "...";
+    desktop_set_read_button(desktop_elements.allReadButton);
+    desktop_set_read_button(desktop_elements.feedReadButton);
     desktop_set_panel_loading(
         desktop_elements.feedList,
         desktop_elements.itemList,
@@ -37,21 +41,24 @@ function desktop_set_loading() {
 }
 
 function desktop_set_item_list_loading() {
+    desktop_set_read_button(desktop_elements.feedReadButton);
     desktop_set_panel_loading(desktop_elements.itemList);
 }
 
 function desktop_set_feed_list_loading() {
+    desktop_set_read_button(desktop_elements.allReadButton);
     desktop_set_panel_loading(desktop_elements.feedList);
 }
 
 function desktop_set_feed_view_loading() {
-    desktop_elements.feedTitle.replaceChildren();
+    desktop_elements.feedTitle.textContent = "...";
     desktop_set_read_button(desktop_elements.feedReadButton);
     desktop_set_item_list_loading();
 }
 
 function desktop_set_item_view_loading() {
     desktop_set_item_content();
+    desktop_elements.itemTitle.textContent = "...";
     desktop_set_panel_loading(desktop_elements.itemContent);
 }
 

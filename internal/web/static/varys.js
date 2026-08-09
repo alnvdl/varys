@@ -327,7 +327,10 @@ async function show_feeds() {
 async function show_feed(uid) {
     let rsp, data;
     try {
-        reset_controls({breadcrumbs: true, read_button: true});
+        reset_controls({
+            breadcrumbs: {uid, name: "..."},
+            read_button: true,
+        });
         set_loading();
         [rsp, data] = await fetch_feed(uid);
     } catch (err) {
