@@ -526,7 +526,7 @@ function set_loading() {
         div.classList.add("loading-ios");
         let elem = document.querySelector("#content");
         window.scrollTo(0, 0);
-        elem.childNodes.forEach(node => {
+        Array.from(elem.children).forEach(node => {
             node.classList.add("invisible");
         })
         elem.append(div);
