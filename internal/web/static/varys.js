@@ -9,22 +9,32 @@ function is_desktop_mode() {
 function load_desktop_assets() {
     if (!is_desktop_mode()) return;
 
-    desktop_stylesheet = document.createElement("link");
-    desktop_stylesheet.rel = "stylesheet";
-    desktop_stylesheet.href = "/static/varys-desktop.css";
+    // Fall back to the mobile app used if either desktop JS or CSS fail to
+    // load.
     let start_mobile = () => {
         unload_desktop_assets();
         start_mobile_mode();
     };
-    desktop_stylesheet.onerror = start_mobile;
-    desktop_stylesheet.onload = () => {
+
+    // Wait for desktop CSS before starting the desktop app so its first layout
+    // is stable.
+    let load_desktop_script = () => {
         let script = document.createElement("script");
         script.src = "/static/varys-desktop.js";
         script.onerror = start_mobile;
         script.onload = () => desktop_start().catch(start_mobile);
         document.head.append(script);
     };
-    document.head.append(desktop_stylesheet);
+
+    // The static desktop stylesheet styles the desktop first paint before this
+    // script runs.
+    desktop_stylesheet = document.querySelector("#desktop-stylesheet");
+    if (desktop_stylesheet.sheet) {
+        load_desktop_script();
+    } else {
+        desktop_stylesheet.onerror = start_mobile;
+        desktop_stylesheet.onload = load_desktop_script;
+    }
 }
 
 let desktop_stylesheet = null;
